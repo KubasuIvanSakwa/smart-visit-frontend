@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .cursor-pen {
+    cursor: url('data:image/svg+xml;utf8,<svg fill="black" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83zM3 17.25V21h3.75l11-11.03-3.75-3.75L3 17.25z"/></svg>') 4 16, auto;
+  }
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+  /* Handle */
+::-webkit-scrollbar-thumb {
+    background:#050505;
+    border-radius: 10px;
+}
