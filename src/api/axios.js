@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-//   baseURL: 'http://127.0.0.1:8000', // No trailing slash
-  baseURL: 'http://127.0.0.1:8000/', // No trailing slash
+//   baseURL: 'https://smart-visit-backend.onrender.com', // No trailing slash
+  baseURL: 'https://smart-visit-backend.onrender.com/', // No trailing slash
 });
 
 // Request Interceptor: Inject Bearer token if available
@@ -30,7 +30,7 @@ api.interceptors.response.use(
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
           const response = await axios.post(
-            'http://127.0.0.1:8000/api/token/refresh/',
+            'https://smart-visit-backend.onrender.com/api/token/refresh/',
             { refresh: refreshToken }
           );
 
