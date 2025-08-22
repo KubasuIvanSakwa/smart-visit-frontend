@@ -214,8 +214,8 @@ return (
               Don't have an account?{' '}
               <button
                 type="button"
-                onClick={() => console.log('Navigate to register')}
-                className="text-gray-700 hover:text-gray-900 font-medium transition-colors underline"
+                onClick={() => window.location.href = 'signup'}
+                className="text-gray-700 hover:text-gray-900 cursor-pointer font-medium transition-colors underline"
               >
                 Sign up
               </button>
@@ -350,8 +350,8 @@ return (
               Don't have an account?{' '}
               <button
                 type="button"
-                onClick={() => console.log('Navigate to register')}
-                className="text-gray-300 hover:text-white font-medium transition-colors underline"
+                onClick={() => window.location.href = 'signup'}
+                className="text-gray-300 hover:text-white cursor-pointerfont-medium transition-colors underline"
               >
                 Sign up
               </button>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Eye, EyeOff, User, Mail, Building, Phone, Users } from 'lucide-react';
+import { useNotification } from '../components/NotificationProvider.jsx';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -12,29 +13,70 @@ const Register = () => {
     password: '',
     confirmPassword: ''
   });
+
+  
+
+  
   const [showPassword, setShowPassword] = useState(false);
+  const [notSame, setNotSame] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTheme, setActiveTheme] = useState('light');
   const navigate = useNavigate();
+    const { addNotification } = useNotification();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
-      return;
+  const isDisabled =
+  notSame ||
+  !formData.firstName ||
+  !formData.lastName ||
+  !formData.email ||
+  !formData.phone ||
+  !formData.password ||
+  !formData.confirmPassword
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (formData.password !== formData.confirmPassword) {
+    alert('Passwords do not match');
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const response = await fetch('http://localhost:8000/api/auth/register/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+        password2: formData.confirmPassword,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        role: 'user', // you can make this dynamic if needed
+        phone: formData.phone,
+        department: formData.department || 'visitor', // fallback if not in form
+        job_title: formData.jobTitle || 'audit' // fallback if not in form
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Registration failed');
     }
-    
-    setIsLoading(true);
-    
-    // Mock registration delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock successful registration
-    alert('Registration successful! Please check your email for verification.');
-    navigate('/auth/login');
-  };
+
+    const data = await response.json();
+    addNotification('Registration successful! Please check your email for verification.', 'success');
+    navigate('/login');
+  } catch (error) {
+    addNotification(error.message, 'error');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleInputChange = (e) => {
     setFormData({
@@ -42,6 +84,15 @@ const Register = () => {
       [e.target.name]: e.target.value
     });
   };
+
+  useEffect(() => {
+    if (formData.password !== formData.confirmPassword) {
+      setNotSame(true)
+      console.log('checking')
+    } else {
+      setNotSame(false)
+    }
+  }, [formData.password, formData.confirmPassword]);
 
   // Theme Selector
   const ThemeSelector = () => (
@@ -206,7 +257,7 @@ const Register = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Confirm Password
+                    Confirm Password <span className='text-red-400 text-sm pl-3'>{notSame && 'Passwords do not match'}</span>
                   </label>
                   <div className="relative">
                     <input
@@ -247,23 +298,24 @@ const Register = () => {
                 </div>
 
                 <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={isLoading}
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Creating account...</span>
-                    </>
-                  ) : (
-                    <>
-                      <User className="w-5 h-5" />
-                      <span>Create Account</span>
-                    </>
-                  )}
-                </button>
+  type="button"
+  onClick={handleSubmit}
+  disabled={isDisabled || isLoading}
+  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+>
+  {isLoading ? (
+    <>
+      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <span>Creating account...</span>
+    </>
+  ) : (
+    <>
+      <User className="w-5 h-5" />
+      <span>Create Account</span>
+    </>
+  )}
+</button>
+
               </div>
 
               <div className="mt-8 text-center">
@@ -413,7 +465,7 @@ const Register = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-3">
-                    Confirm Password
+                    Confirm Password <span className='text-red-400'>{notSame && "Passwords do not match"}</span>
                   </label>
                   <div className="relative">
                     <input

@@ -45,7 +45,8 @@ function App() {
 
       <Route path="check-in" element={<CheckIn />} />
       <Route path='*' element={<NotFound />} />
-          <Route path='/entry' element={<VisitorEntry />} />
+        <Route path='/entry' element={<VisitorEntry />} />
+        <Route path='/kiosk-checkin' element={<NewKiosk />} />
 
       {/* Protected Routes */}
       <Route path='/' element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -53,14 +54,13 @@ function App() {
           <Route path='/host' element={<HostDashboard/>} />
           <Route path='/host-schedule' element={<HostSchedule />} />
 
-          <Route path='/check-in' element={<CheckIn />} />
+          {/* <Route path='/check-in' element={<CheckIn />} /> */}
           <Route path='/notifications' element={<NotificationsPage />} />
 
           <Route path='/dashboard/visitor/:id' element={<VisitorDetails />} />
           <Route path='/badge' element={<BadgePage />} />
           <Route path='/form-builder' element={<FormBuilder />} />
 
-          <Route path='/kiosk-checkin' element={<NewKiosk />} />
           <Route path='/profile' element={<NewProfile />} />
           <Route path='/adduser' element={<AddUser />} />
 

@@ -28,7 +28,7 @@ import { useNotification } from "../components/NotificationProvider";
 import { form } from "framer-motion/client";
 
 const NewKiosk = () => {
-  const [currentStep, setCurrentStep] = useState("search");
+  const [currentStep, setCurrentStep] = useState("form");
   const [searchQuery, setSearchQuery] = useState("");
   const [isWalkIn, setIsWalkIn] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
@@ -252,8 +252,8 @@ const NewKiosk = () => {
   };
 
   const resetProcess = () => {
-    setCurrentStep("search");
-    setSearchQuery("");
+    setCurrentStep("form");
+    // setSearchQuery("");
     setIsWalkIn(false);
     setCapturedPhoto(null);
     setSignature(null);
@@ -274,21 +274,9 @@ const NewKiosk = () => {
   };
 
   const handleFetchUsers = async () => {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      addNotification("You must be logged in to fetch users.", "error");
-      return;
-    }
-
-    try {
+try {
       const response = await axios.get(
         "https://smart-visit-backend.onrender.com/api/auth/users/",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
       );
 
       if (response.status === 200) {
@@ -391,7 +379,6 @@ const NewKiosk = () => {
     <div className="bg-white border border-gray-100 p-4 mb-6">
       <div className="flex items-center justify-between max-w-2xl mx-auto">
         {[
-          { id: "search", icon: Search, label: "Search" },
           { id: "form", icon: FileText, label: "Details" },
           { id: "photo", icon: Camera, label: "Photo" },
           { id: "signature", icon: FileText, label: "Signature" },
@@ -479,7 +466,7 @@ const NewKiosk = () => {
       <div className="max-w-4xl mx-auto p-6">
         <StepIndicator />
 
-        {/* Step 1: Search */}
+        {/* Step 1: Search
         {currentStep === "search" && (
           <div className="bg-white border border-gray-100 p-8">
             <div className="max-w-2xl mx-auto space-y-6">
@@ -552,7 +539,7 @@ const NewKiosk = () => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Step 2: Form */}
         {currentStep === "form" && (
