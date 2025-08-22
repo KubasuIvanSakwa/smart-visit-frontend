@@ -88,7 +88,7 @@ const LandingPage = () => {
   };
 
   const handleStartCheckIn = () => {
-    window.location.href = '/entry';
+    window.location.href = '/kiosk-checkin';
   };
 
   const scrollToTop = () => {
