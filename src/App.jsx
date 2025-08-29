@@ -30,6 +30,7 @@ import HostSchedule from "./pages/HostSchedule";
 import NotificationsPage from "./pages/NotificationPage";
 import AddUser from "./pages/AddUser";
 import Navbar from "./components/Navbar";
+import Dashbaord from "./pages/Dashbaord";
 
 function App() {
   const routes = createBrowserRouter(
@@ -57,7 +58,7 @@ function App() {
 
         {/* Protected Routes */}
         <Route path="/dashboard" element={<Layout />}>
-
+              <Route index element={<Dashbaord />} />
         </Route>
       </>
     ),

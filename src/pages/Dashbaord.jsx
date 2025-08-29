@@ -1,4 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
+import {
+  Users,
+  Clock,
+  TrendingUp,
+  Download,
+  UserCheck,
+  UserX,
+  UserPlus,
+  AlertCircle,
+  User,
+  MonitorCheck,
+  LogOut,
+  ChevronRight,
+  Home,
+  BarChart3,
+  Settings,
+  Calendar,
+  Bell,
+  Menu,
+  X,
+} from "lucide-react";
 import { Link, Outlet } from 'react-router';
 import { useNotification } from '../components/NotificationProvider';
 import { useAuth } from '../context/AuthContext';
@@ -650,168 +671,140 @@ const Dashbaord = () => {
   // };
 
   return (
-    <section>
-      <div className="flex h-screen bg-gray-50">
-        <LightSidebar
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          activeNav={activeNav}
-          setActiveNav={setActiveNav}
-          handleLogout={handleLogout}
-          navItems={navItems}
-        />
+    <div className="min-h-screen">
+      {/* Theme Selector
+      <div className="fixed top-[3rem]   right-6 z-50 flex bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        <button
+          onClick={() => setActiveTheme('light')}
+          className={`px-4 py-2 text-sm font-medium transition-colors  ${
+            activeTheme === 'light'
+              ? 'bg-gray-900 text-white'
+              : 'text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          Light
+        </button>
+        <button
+          onClick={() => setActiveTheme('dark')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTheme === 'dark'
+              ? 'bg-gray-900 text-white'
+              : 'text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          Dark
+        </button>
+      </div> */}
+
+      {activeTheme === 'light' ? (
+        // Light Theme Layout
+        <div className="flex h-screen bg-gray-50">
+          
+
+          <div className="absolute bottom-4 left-4 right-4">
       </div>
-        <section>
-          <Outlet />
-        </section>
-    </section> // <div className="min-h-screen">
-    //   {/* Theme Selector
-    //   <div className="fixed top-[3rem]   right-6 z-50 flex bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-    //     <button
-    //       onClick={() => setActiveTheme('light')}
-    //       className={`px-4 py-2 text-sm font-medium transition-colors  ${
-    //         activeTheme === 'light'
-    //           ? 'bg-gray-900 text-white'
-    //           : 'text-gray-700 hover:bg-gray-50'
-    //       }`}
-    //     >
-    //       Light
-    //     </button>
-    //     <button
-    //       onClick={() => setActiveTheme('dark')}
-    //       className={`px-4 py-2 text-sm font-medium transition-colors ${
-    //         activeTheme === 'dark'
-    //           ? 'bg-gray-900 text-white'
-    //           : 'text-gray-700 hover:bg-gray-50'
-    //       }`}
-    //     >
-    //       Dark
-    //     </button>
-    //   </div> */}
+          {/* Overlay for mobile */}
+          {/* {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            /> */}
+          {/* )} */}
 
-    //   {activeTheme === 'light' ? (
-    //     // Light Theme Layout
-    //     <div className="flex h-screen bg-gray-50">
-    //        <LightSidebar
-    //         sidebarOpen={sidebarOpen}
-    //         setSidebarOpen={setSidebarOpen}
-    //         activeNav={activeNav}
-    //         setActiveNav={setActiveNav}
-    //         handleLogout={handleLogout}
-    //         navItems={navItems}
-    //       />
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Top Bar */}
+            <div className="bg-black border border-white px-6 py-4 h-[5rem]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                    
+                </div>
+              </div>
+            </div>
 
-    //       <div className="absolute bottom-4 left-4 right-4">
-    //   </div>
-    //       {/* Overlay for mobile */}
-    //       {sidebarOpen && (
-    //         <div
-    //           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-    //           onClick={() => setSidebarOpen(false)}
-    //         />
-    //       )}
+            {/* Content Area */}
+            <div className="flex-1 overflow-auto p-6">
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {statsData.map((stat, index) => (
+                  <LightStatsCard key={index} {...stat} />
+                ))}
+              </div>
 
-    //       {/* Main Content */}
-    //       <div className="flex-1 flex flex-col overflow-hidden">
-    //         {/* Top Bar */}
-    //         <div className="bg-white border-b border-gray-200 px-6 py-4">
-    //           <div className="flex items-center justify-between">
-    //             <div className="flex items-center">
-    //               <button
-    //                 onClick={() => setSidebarOpen(true)}
-    //                 className="lg:hidden mr-4 p-1 rounded hover:bg-gray-100"
-    //               >
-    //                 <Menu className="h-5 w-5 text-gray-500" />
-    //               </button>
-    //               <h1 className="text-2xl font-light text-gray-900">Dashboard</h1>
-    //             </div>
-    //             <p className="text-gray-500 text-sm">Monitor visitor activity and system performance</p>
-    //           </div>
-    //         </div>
+              {/* Tables */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {visiblePendingApprovals > 0 ? <LightTable title="Pending Approvals" data={visiblePendingApprovals} />:  <div className="text-gray-500">No Pending Approvals</div>}
+                <LightVisitorTable title="Current Visitors" data={visibleVisitors} />
+              </div>
 
-    //         {/* Content Area */}
-    //         <div className="flex-1 overflow-auto p-6">
-    //           {/* Stats Grid */}
-    //           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-    //             {statsData.map((stat, index) => (
-    //               <LightStatsCard key={index} {...stat} />
-    //             ))}
-    //           </div>
+              {/* Action Button */}
+              <div className="flex justify-end">
+                <button className="flex items-center space-x-2 px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                  <Download className="h-4 w-4" />
+                  <span>Export Report</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Dark Theme Layout
+        <div className="flex h-screen bg-black">
+          {/* <DarkSidebar /> */}
 
-    //           {/* Tables */}
-    //           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    //             {visiblePendingApprovals > 0 ? <LightTable title="Pending Approvals" data={visiblePendingApprovals} />:  <div className="text-gray-500">No Pending Approvals</div>}
-    //             <LightVisitorTable title="Current Visitors" data={visibleVisitors} />
-    //           </div>
+          {/* Overlay for mobile */}
+          {/* {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )} */}
 
-    //           {/* Action Button */}
-    //           <div className="flex justify-end">
-    //             <button className="flex items-center space-x-2 px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
-    //               <Download className="h-4 w-4" />
-    //               <span>Export Report</span>
-    //             </button>
-    //           </div>
-    //         </div>
-    //       </div>
-    //     </div>
-    //   ) : (
-    //     // Dark Theme Layout
-    //     <div className="flex h-screen bg-black">
-    //       <DarkSidebar />
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Top Bar */}
+            <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="lg:hidden mr-4 p-1 rounded hover:bg-gray-800"
+                  >
+                    <Menu className="h-5 w-5 text-gray-400" />
+                  </button>
+                  <h1 className="text-2xl font-light text-white">Dashboard</h1>
+                </div>
+                <p className="text-gray-400 text-sm">Monitor visitor activity and system performance</p>
+              </div>
+            </div>
 
-    //       {/* Overlay for mobile */}
-    //       {sidebarOpen && (
-    //         <div
-    //           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-    //           onClick={() => setSidebarOpen(false)}
-    //         />
-    //       )}
+            {/* Content Area */}
+            <div className="flex-1 overflow-auto p-6">
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {statsData.map((stat, index) => (
+                  <DarkStatsCard key={index} {...stat} />
+                ))}
+              </div>
 
-    //       {/* Main Content */}
-    //       <div className="flex-1 flex flex-col overflow-hidden">
-    //         {/* Top Bar */}
-    //         <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-    //           <div className="flex items-center justify-between">
-    //             <div className="flex items-center">
-    //               <button
-    //                 onClick={() => setSidebarOpen(true)}
-    //                 className="lg:hidden mr-4 p-1 rounded hover:bg-gray-800"
-    //               >
-    //                 <Menu className="h-5 w-5 text-gray-400" />
-    //               </button>
-    //               <h1 className="text-2xl font-light text-white">Dashboard</h1>
-    //             </div>
-    //             <p className="text-gray-400 text-sm">Monitor visitor activity and system performance</p>
-    //           </div>
-    //         </div>
+              {/* Tables */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <DarkTable title="Pending Approvals" data={pendingApprovals} />
+                <DarkTable title="Current Visitors" data={currentVisitors} />
+              </div>
 
-    //         {/* Content Area */}
-    //         <div className="flex-1 overflow-auto p-6">
-    //           {/* Stats Grid */}
-    //           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-    //             {statsData.map((stat, index) => (
-    //               <DarkStatsCard key={index} {...stat} />
-    //             ))}
-    //           </div>
-
-    //           {/* Tables */}
-    //           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    //             <DarkTable title="Pending Approvals" data={pendingApprovals} />
-    //             <DarkTable title="Current Visitors" data={currentVisitors} />
-    //           </div>
-
-    //           {/* Action Button */}
-    //           <div className="flex justify-end">
-    //             <button className="flex items-center space-x-2 px-6 py-3 bg-white text-black text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors">
-    //               <Download className="h-4 w-4" />
-    //               <span>Export Report</span>
-    //             </button>
-    //           </div>
-    //         </div>
-    //       </div>
-    //     </div>
-    //   )}
-    // </div>
+              {/* Action Button */}
+              <div className="flex justify-end">
+                <button className="flex items-center space-x-2 px-6 py-3 bg-white text-black text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors">
+                  <Download className="h-4 w-4" />
+                  <span>Export Report</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

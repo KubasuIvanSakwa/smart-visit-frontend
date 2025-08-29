@@ -20,7 +20,7 @@ import {
   Settings,
   Calendar,
   Bell,
-  Menu,
+  PencilLine,
   X,
 } from "lucide-react";
 
@@ -91,14 +91,14 @@ const LightSidebar = ({
     return (
       <div
         className={`fixed inset-y-0 left-0 z-50 ${
-          isExpanded ? "w-64" : "w-16"
-        } bg-white border-r border-gray-200 transform ${
+          isExpanded ? "w-80" : "w-16"
+        } bg-white transform shadow-xl ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-between h-20 px-4">
+          <div className="flex items-center space-x-2">
             {/* Logo */}
             <div className="relative">
               <input
@@ -110,18 +110,23 @@ const LightSidebar = ({
               />
               <label
                 htmlFor="logo-upload"
-                className="block w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded cursor-pointer hover:opacity-80 transition-opacity"
+                className="block w-[2.5rem] h-[2.5rem] bg-gradient-to-br border overflow-hidden rounded cursor-pointer hover:opacity-80 transition-opacity"
                 title="Click to upload logo"
               >
                 {logoImage ? (
-                  <img
-                    src={logoImage}
-                    alt="Logo"
-                    className="w-8 h-8 rounded object-cover"
-                  />
+                  <div className="relative">
+                    <img
+                      src={logoImage}
+                      alt="Logo"
+                      className="w-[2.5rem] h-[2.5rem] rounded object-cover"
+                    />
+                    {/* {<div className="absolute z-4 top-1 left-1 bg-white rounded-full flex justify-center items-center p-1">
+                     <PencilLine className="w-[1.3rem]"/>
+                    </div>} */}
+                  </div>
                 ) : (
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                    DS
+                    YN
                   </div>
                 )}
               </label>
@@ -130,7 +135,7 @@ const LightSidebar = ({
             {/* DashSpace Text */}
             {isExpanded && (
               <h2 className="text-lg font-semibold text-gray-900 transition-opacity duration-200">
-                DashSpace
+                Yunovia Group
               </h2>
             )}
           </div>
@@ -138,7 +143,7 @@ const LightSidebar = ({
           {/* Toggle Button */}
           <button
             onClick={handleToggleExpanded}
-            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+            className="p-1 rounded-full hover:bg-gray-100 bg-white transition-colors"
             title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
           >
             <div className="w-4 h-4 border-2 border-gray-400 rounded-full relative">
