@@ -21,7 +21,7 @@ import NewKiosk from "./pages/NewKiosk";
 import NewProfile from "./pages/NewProfile";
 import NewLogin from "./pages/NewLogin";
 import VisitorEntry from "./pages/VisitorEntry";
-import Analytics from "./pages/Analytics";
+import Analytics from "./pages/ResponsiveChartsContainer";
 import LoadingSpinnerDemo from "./components/LoadingSpinner";
 import PublicRoute from "./components/PublicRoute";
 import ProtectedRoute from "./components/ProtectedRoute";

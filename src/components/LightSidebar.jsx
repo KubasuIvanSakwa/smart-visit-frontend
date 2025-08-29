@@ -91,8 +91,8 @@ const LightSidebar = ({
     return (
       <div
         className={`fixed inset-y-0 left-0 z-50 ${
-          isExpanded ? "w-80" : "w-16"
-        } bg-white transform shadow-xl ${
+          isExpanded ? "w-65" : "w-16"
+        } bg-white transform shadow-lg ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
       >
