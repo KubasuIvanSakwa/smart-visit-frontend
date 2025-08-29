@@ -50,7 +50,7 @@ const ProfileEdit = ({ userData, onUpdate }) => {
     
     try {
       const response = await axios.patch(
-        'https://smart-visit-backend.onrender.com/api/profile/update/',
+        'http://127.0.0.1:8000/api/profile/update/',
         formData,
         {
           headers: {

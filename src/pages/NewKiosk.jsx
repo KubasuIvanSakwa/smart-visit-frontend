@@ -88,7 +88,7 @@ const NewKiosk = () => {
 
     try {
       const res = await fetch(
-        "https://smart-visit-backend.onrender.com/api/visitors/kiosk-checkin/",
+        "http://127.0.0.1:8000/api/visitors/kiosk-checkin/",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -276,7 +276,7 @@ const NewKiosk = () => {
   const handleFetchUsers = async () => {
 try {
       const response = await axios.get(
-        "https://smart-visit-backend.onrender.com/api/auth/users/",
+        "http://127.0.0.1:8000/api/auth/users/",
       );
 
       if (response.status === 200) {
@@ -346,7 +346,7 @@ try {
 
           // Send to your notification endpoint
           await axios.post(
-            "https://smart-visit-backend.onrender.com/api/notifications/bulk_notify/",
+            "http://127.0.0.1:8000/api/notifications/bulk_notify/",
             notificationPayload,
             {
               headers: {

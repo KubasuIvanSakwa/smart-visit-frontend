@@ -133,7 +133,7 @@ const handleAddUser = async () => {
       role: formData.role,
     };
 
-    const response = await axios.post('https://smart-visit-backend.onrender.com/api/auth/register/', newUser, {
+    const response = await axios.post('http://127.0.0.1:8000/api/auth/register/', newUser, {
       headers: {
         'Content-Type': 'application/json',
       }

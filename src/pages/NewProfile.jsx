@@ -61,7 +61,7 @@ const fetchCurrentUser = async () => {
 
   setLoading(prev => ({ ...prev, profile: true }));
   try {
-    const response = await axios.get('https://smart-visit-backend.onrender.com/api/auth/user/profile/', {
+    const response = await axios.get('http://127.0.0.1:8000/api/auth/user/profile/', {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ const fetchCurrentUser = async () => {
 
     setLoading(prev => ({ ...prev, permissions: true }));
     try {
-      const response = await axios.get('https://smart-visit-backend.onrender.com/api/auth/permissions/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/auth/permissions/', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -127,7 +127,7 @@ const fetchCurrentUser = async () => {
     }
 
     try {
-      const response = await axios.get('https://smart-visit-backend.onrender.com/api/auth/users/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/auth/users/', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -159,7 +159,7 @@ const fetchCurrentUser = async () => {
     }
 
     try {
-      const response = await axios.get('https://smart-visit-backend.onrender.com/api/auth/user/profile/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/auth/user/profile/', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
