@@ -37,7 +37,7 @@ const LightSidebar = ({
         { id: "dashboard", icon: Home, label: "Dashboard" },
         // { id: 'visitors', icon: Users, label: 'Visitors' },
         // { id: 'calendar', icon: Calendar, label: 'Calendar' },
-        { id: "notifications", icon: Bell, label: "Notifications", count: 3 },
+        // { id: "notifications", icon: Bell, label: "Notifications", count: 3 },
         { id: "kiosk-checkin", icon: MonitorCheck, label: "Kiosk" },
         { id: "adduser", icon: UserPlus, label: "Add User" },
         { id: "analytics", icon: BarChart3, label: "Analytics" },
@@ -209,7 +209,7 @@ const LightSidebar = ({
             .map((item) => (
               <Link
                 key={item.id}
-                to={`/${item.id}`}
+                to={`${item.id}`}
                 onClick={() => setActiveNav(item.id)}
                 className={`flex items-center ${
                   isExpanded ? "px-3 justify-start" : "px-2 justify-center"
@@ -234,7 +234,7 @@ const LightSidebar = ({
               </Link>
             ))}
 
-          {/* Analytics */}
+          {/* Analytics
           <Link
             to="/analytics"
             onClick={() => setActiveNav("analytics")}
@@ -249,7 +249,7 @@ const LightSidebar = ({
           >
             <BarChart3 className="h-5 w-5 flex-shrink-0" />
             {isExpanded && <span className="ml-3">Analytics</span>}
-          </Link>
+          </Link> */}
 
           {/* PAGES Section */}
           {isExpanded && (
@@ -258,7 +258,7 @@ const LightSidebar = ({
             </div>
           )}
 
-          {/* Settings */}
+          {/* Settings
           <Link
             to="/profile"
             onClick={() => setActiveNav("profile")}
@@ -273,7 +273,7 @@ const LightSidebar = ({
           >
             <Settings className="h-5 w-5 flex-shrink-0" />
             {isExpanded && <span className="ml-3">Settings</span>}
-          </Link>
+          </Link> */}
 
           {/* Logout Button */}
           <button

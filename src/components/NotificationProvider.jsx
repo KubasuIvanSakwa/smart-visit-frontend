@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext } from 'react';
 import Notifications from './Notfications';
 

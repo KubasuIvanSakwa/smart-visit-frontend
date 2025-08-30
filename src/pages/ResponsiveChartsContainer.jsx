@@ -62,7 +62,7 @@ const VisitorManagementChart = () => {
             
             <Bar 
               dataKey="totalVisitors" 
-              fill="#e2e8f0"
+              fill="#aeb1b5"
               radius={[20, 20, 0, 0]}
               animationDuration={1500}
               animationBegin={0}

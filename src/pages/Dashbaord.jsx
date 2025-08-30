@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 import {
   Users,
   Clock,
@@ -21,15 +21,16 @@ import {
   Cog as Settings,
   MessageCircleMore,
 } from "lucide-react";
-import { Link, Outlet } from 'react-router';
-import { useNotification } from '../components/NotificationProvider';
-import { useAuth } from '../context/AuthContext';
-import api from '../api/axios';
-import LightSidebar from '../components/LightSidebar';
-import LightStatsCard from '../components/LightStatsCard';
-import DailyChart from './ResponsiveChartsContainer';
-import ResponsiveChartsContainer from './ResponsiveChartsContainer';
-
+import { Link, Outlet } from "react-router";
+import { useNotification } from "../components/NotificationProvider";
+import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
+import LightSidebar from "../components/LightSidebar";
+import LightStatsCard from "../components/LightStatsCard";
+import DailyChart from "./ResponsiveChartsContainer";
+import ResponsiveChartsContainer from "./ResponsiveChartsContainer";
+import VisitorsTable from "../components/VisitorsTable";
+import TopNav from "../components/TopNav";
 
 // Sample data
 // const currentVisitors = [
@@ -45,7 +46,6 @@ import ResponsiveChartsContainer from './ResponsiveChartsContainer';
 
 const Dashbaord = () => {
   const [activeTheme, setActiveTheme] = useState("light");
-  
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -75,10 +75,6 @@ const Dashbaord = () => {
   // const handleRejectVisitor = (visitorId) => {
   //   setPendingList(pendingList.filter(v => v.id !== visitorId));
   // };
-
-  
-
-  
 
   const LightVisitorTable = ({ title, data }) => (
     <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
@@ -127,7 +123,6 @@ const Dashbaord = () => {
       </div>
     </div>
   );
-
 
   const DarkStatsCard = ({ icon: Icon, title, value, change, trend }) => (
     <div className="bg-gray-900 border border-gray-800 p-6 transition-all duration-200 hover:border-gray-700 hover:bg-gray-850">
@@ -360,8 +355,8 @@ const Dashbaord = () => {
         .filter((v) => v.status !== "Checked Out")
         .length.toString(),
       change: {
-        num:"+8%",
-        text:"from yesterday"
+        num: "+8%",
+        text: "from yesterday",
       },
       trend: "up",
     },
@@ -372,8 +367,8 @@ const Dashbaord = () => {
         .filter((v) => v.status !== "Checked Out")
         .length.toString(),
       change: {
-        num:"+15% ",
-        text:"from last month"
+        num: "+15% ",
+        text: "from last month",
       },
       trend: "up",
     },
@@ -384,8 +379,8 @@ const Dashbaord = () => {
         .filter((v) => v.status !== "Checked Out")
         .length.toString(),
       change: {
-        num:"",
-        text:"Awaiting approval"
+        num: "",
+        text: "Awaiting approval",
       },
     },
     {
@@ -393,8 +388,8 @@ const Dashbaord = () => {
       title: "Avg Visit Duration",
       value: "6h",
       change: {
-        num:"-12%",
-        text:"from last week"
+        num: "-12%",
+        text: "from last week",
       },
       trend: "down",
     },
@@ -404,66 +399,21 @@ const Dashbaord = () => {
     <div className="min-h-screen">
       <div className="flex h-screen bg-gray-50">
         <div className="absolute bottom-4 left-4 right-4"></div>
-        {/* Overlay for mobile */}
-        {/* {sidebarOpen && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            /> */}
-        {/* )} */}
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top Bar */}
-          <div className="relative border border-white/20 backdrop-blur-lg z-4 px-6 py-6 h-[5rem]">
-            <div className="flex items-center justify-center h-[4rem] ">
-              <div className="relative flex items-center justify-between bg-white z-4 p-1 shadow-xl h-full w-[95%] rounded-[0.4rem]">
-                <div className="flex items-center">
-                  <Search className="h-4 w-4 text-gray-500 ml-4 opacity-40" />
-                  <input
-                    className="outline-none px-2 placeholder:text-gray-500/30"
-                    placeholder="Search..."
-                  />
-                </div>
-
-                <div className="flex items-center space-x-4 text-gray-600 mr-4">
-                  <Settings className="cursor-pointer" />
-                  <MessageCircleMore className="cursor-pointer" />
-                  <Bell className="cursor-pointer" />
-                  <div className="flex items-center space-x-2 w-[3rem] h-[3rem] cursor-pointer p-1 border-1 border-blue-800 rounded-full">
-                    <div className="bg-yellow-700 w-full h-full rounded-full"></div>
-                  </div>
-                </div>
-                {/* darkmodechanger */}
-              </div>
-            </div>
-          </div>
+        <div className="flex-1 flex flex-col overflow-hidden pr-1">
+          <TopNav />
 
           {/* Content Area */}
-          <div className="flex-1 overflow-auto p-6">
+          <div className="flex-1 overflow-auto p-6 h-full pt-[7rem]">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
               {statsData.map((stat, index) => (
                 <LightStatsCard key={index} {...stat} />
               ))}
             </div>
-           <div className="w-full">
+            <div className="w-full">
               <ResponsiveChartsContainer />
-          </div>
-
-            {/* Tables */}
-            {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {visiblePendingApprovals > 0 ? <LightTable title="Pending Approvals" data={visiblePendingApprovals} />:  <div className="text-gray-500">No Pending Approvals</div>}
-                <LightVisitorTable title="Current Visitors" data={visibleVisitors} />
-              </div> */}
-
-            {/* Action Button */}
-            {/* <div className="flex justify-end">
-                <button className="flex items-center space-x-2 px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
-                  <Download className="h-4 w-4" />
-                  <span>Export Report</span>
-                </button>
-              </div> */}
+              <VisitorsTable />
+            </div>
           </div>
         </div>
       </div>

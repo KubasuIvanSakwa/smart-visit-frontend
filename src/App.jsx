@@ -18,7 +18,7 @@ import Reports from "./pages/Reports";
 // import Dashbaord from './pages/Dashbaord';
 import HostDashboard from "./pages/HostDashboard";
 import NewKiosk from "./pages/NewKiosk";
-import NewProfile from "./pages/NewProfile";
+import Profile from "./pages/NewProfile";
 import NewLogin from "./pages/NewLogin";
 import VisitorEntry from "./pages/VisitorEntry";
 import Analytics from "./pages/ResponsiveChartsContainer";
@@ -58,7 +58,11 @@ function App() {
 
         {/* Protected Routes */}
         <Route path="/dashboard" element={<Layout />}>
-              <Route index element={<Dashbaord />} />
+            <Route index element={<Dashbaord />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="adduser" element={<AddUser />} />
+
         </Route>
       </>
     ),
