@@ -1,87 +1,29 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronLeft, Search, Edit3, MoreVertical } from 'lucide-react';
 
-const VisitorsTable = () => {
+const VisitorsTable = ({ visitors = [] }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const itemsPerPage = 5;
 
-  // Reduced visitor data for demo
-  const allVisitors = [
-    {
-      id: 'VIS001',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@company.com',
-      company: 'TechCorp Inc.',
-      purpose: 'Business Meeting',
-      checkIn: '10:30 AM',
-      checkOut: '2:45 PM',
-      date: '3-26-2024',
-      status: 'CO'
-    },
-    {
-      id: 'VIS002', 
-      name: 'Michael Chen',
-      email: 'michael.chen@startup.io',
-      company: 'StartupXYZ',
-      purpose: 'Interview',
-      checkIn: '9:15 AM',
-      checkOut: '-',
-      date: '3-26-2024',
-      status: 'IM'
-    },
-    {
-      id: 'VIS003',
-      name: 'Emily Rodriguez',
-      email: 'emily.r@consulting.com',
-      company: 'Global Consulting',
-      purpose: 'Client Consultation',
-      checkIn: '11:00 AM',
-      checkOut: '-',
-      date: '3-26-2024',
-      status: 'CI'
-    },
-    {
-      id: 'VIS004',
-      name: 'David Kim',
-      email: 'david.kim@tech.com',
-      company: 'Innovation Labs',
-      purpose: 'Partnership Discussion',
-      checkIn: '1:30 PM',
-      checkOut: '4:15 PM',
-      date: '3-25-2024',
-      status: 'CO'
-    },
-    {
-      id: 'VIS005',
-      name: 'Lisa Wang',
-      email: 'lisa.wang@design.co',
-      company: 'Creative Design Co',
-      purpose: 'Design Review',
-      checkIn: '2:00 PM',
-      checkOut: '-',
-      date: '3-25-2024',
-      status: 'W'
-    }
-  ];
-
   // Filter visitors based on search term
-  const filteredVisitors = allVisitors.filter(visitor => 
-    visitor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    visitor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    visitor.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    visitor.purpose.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredVisitors = visitors.filter(visitor =>
+    (visitor.name || `${visitor.first_name} ${visitor.last_name}` || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (visitor.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (visitor.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (visitor.purpose || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Pagination logic
   const totalPages = Math.ceil(filteredVisitors.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const visitors = filteredVisitors.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedVisitors = filteredVisitors.slice(startIndex, startIndex + itemsPerPage);
 
   // Generate avatar with initials
   const getAvatar = (name) => {
+    if (!name) return null;
     const initials = name.split(' ').map(n => n[0]).join('');
     const colors = [
       'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
@@ -118,7 +60,7 @@ const VisitorsTable = () => {
     if (selectAll) {
       setSelectedItems([]);
     } else {
-      setSelectedItems(visitors.map(v => v.id));
+      setSelectedItems(paginatedVisitors.map(v => v.id));
     }
     setSelectAll(!selectAll);
   };
@@ -189,7 +131,7 @@ const VisitorsTable = () => {
               </tr>
             </thead>
             <tbody>
-              {visitors.map((visitor) => (
+              {paginatedVisitors.map((visitor) => (
                 <tr key={visitor.id} className="bg-white border-b border-gray-200 hover:bg-gray-50">
                   <td className="w-4 p-4">
                     <div className="flex items-center">
@@ -204,9 +146,9 @@ const VisitorsTable = () => {
                   </td>
                   <th scope="row" className="px-3 py-4 font-medium text-gray-900">
                     <div className="flex items-center space-x-3">
-                      {getAvatar(visitor.name)}
+                      {getAvatar(visitor.first_name && visitor.last_name ? `${visitor.first_name} ${visitor.last_name}` : visitor.name)}
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold truncate">{visitor.name}</div>
+                        <div className="font-semibold truncate">{visitor.first_name && visitor.last_name ? `${visitor.first_name} ${visitor.last_name}` : visitor.name}</div>
                         <div className="text-sm text-gray-500 truncate">{visitor.email}</div>
                         {/* Show company on mobile in visitor details */}
                         <div className="md:hidden text-xs text-gray-400 truncate mt-1">{visitor.company}</div>
@@ -219,7 +161,7 @@ const VisitorsTable = () => {
                   <td className="px-3 py-4 hidden lg:table-cell">
                     <div className="text-sm">
                       <div className="font-medium text-gray-900 truncate">{visitor.purpose}</div>
-                      <div className="text-gray-500">{visitor.date}</div>
+                      <div className="text-gray-500">{visitor.check_in_time ? new Date(visitor.check_in_time).toLocaleDateString() : ''}</div>
                     </div>
                   </td>
                   <td className="px-3 py-4">
@@ -227,12 +169,12 @@ const VisitorsTable = () => {
                       <div className="text-green-600">
                         <span className="hidden sm:inline">In: </span>
                         <span className="sm:hidden">I: </span>
-                        {visitor.checkIn}
+                        {visitor.check_in_time ? new Date(visitor.check_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}
                       </div>
                       <div className="text-red-600">
                         <span className="hidden sm:inline">Out: </span>
                         <span className="sm:hidden">O: </span>
-                        {visitor.checkOut}
+                        {visitor.check_out_time ? new Date(visitor.check_out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}
                       </div>
                     </div>
                   </td>

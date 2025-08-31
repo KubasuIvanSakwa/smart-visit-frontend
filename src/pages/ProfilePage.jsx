@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { 
-  User, Settings, Save, Edit3, Eye, EyeOff, Shield, Users, 
-  Clock, TrendingUp, Download, UserCheck, UserX, UserPlus, 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  User, Settings, Save, Edit3, Eye, EyeOff, Shield, Users,
+  Clock, TrendingUp, Download, UserCheck, UserX, UserPlus,
   AlertCircle, Bell, Lock, Mail, Phone, Building, Calendar,
   Check, X, ChevronRight, Camera
 } from 'lucide-react';
+import api from '../api/axios';
+import { useNotification } from '../components/NotificationProvider';
+import { useAuth } from '../context/AuthContext';
 
 // User profiles data
 const USERS = [
@@ -134,13 +137,18 @@ const DEFAULT_ROLE_PERMISSIONS = {
 };
 
 const ProfilePage = () => {
-  const [currentUser] = useState(USERS[0]); // Simulating logged-in admin user
-  const [users, setUsers] = useState(USERS);
+  const { addNotification } = useNotification();
+  const { user } = useAuth();
+
+  const [currentUser, setCurrentUser] = useState(null);
+  const [users, setUsers] = useState([]);
   const [rolePermissions, setRolePermissions] = useState(DEFAULT_ROLE_PERMISSIONS);
   const [activeTab, setActiveTab] = useState('profile');
   const [editingUser, setEditingUser] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [editingPermissions, setEditingPermissions] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [notifications, setNotifications] = useState({
     email: true,
     push: false,
@@ -149,6 +157,54 @@ const ProfilePage = () => {
     pendingApprovals: true,
     systemUpdates: false
   });
+
+  // Fetch user profile data from backend
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      console.log('ProfilePage: Starting to fetch user profile data...');
+      setLoading(true);
+      setError(null);
+
+      // Show loading notification
+      addNotification('Loading profile data...', 'loading');
+
+      // Fetch current user profile
+      const profileResponse = await api.get('/api/users/profile');
+      console.log('ProfilePage: User profile data fetched successfully:', profileResponse.data);
+
+      setCurrentUser(profileResponse.data);
+
+      // Fetch all users if current user is admin
+      if (profileResponse.data.role === 'admin') {
+        console.log('ProfilePage: User is admin, fetching all users...');
+        const usersResponse = await api.get('/api/users');
+        console.log('ProfilePage: All users data fetched successfully:', usersResponse.data);
+        setUsers(usersResponse.data);
+      }
+
+      console.log('ProfilePage: Data fetching completed successfully');
+      // Show success notification
+      addNotification('Profile data loaded successfully', 'success');
+    } catch (err) {
+      console.error('ProfilePage: Error fetching user data:', err);
+      setError(err.message || 'Failed to fetch user data');
+
+      // Only show error notification if it's not a duplicate
+      if (err.response?.status === 404) {
+        addNotification('Profile endpoint not found. Please check backend configuration.', 'error');
+      } else {
+        addNotification('Failed to load profile data. Please try again.', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [addNotification]);
+
+  // Fetch data on component mount
+  useEffect(() => {
+    console.log('ProfilePage: Component mounted, fetching user data...');
+    fetchUserProfile();
+  }, [fetchUserProfile]);
 
   const handleSaveProfile = (userId, updatedData) => {
     setUsers(users.map(user => 

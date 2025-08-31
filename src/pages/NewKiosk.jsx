@@ -1,14 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  ArrowLeft, UserCheck, Camera, Edit3, CheckCircle, FileText, User, 
-  Phone, Mail, Building, Car, MapPin, Target, Timer, Users, ChevronRight, 
-  X, Check, AlertCircle, RotateCcw, Badge, Clock, Wifi, WifiOff 
+import {
+  ArrowLeft, UserCheck, Camera, Edit3, CheckCircle, FileText, User,
+  Phone, Mail, Building, Car, MapPin, Target, Timer, Users, ChevronRight,
+  X, Check, AlertCircle, RotateCcw, Badge, Clock, Wifi, WifiOff
 } from 'lucide-react';
+import api from '../api/axios';
+import { useNotification } from '../components/NotificationProvider';
+import axios from 'axios';
 
 const VisitorCheckIn = () => {
   const [currentStep, setCurrentStep] = useState("form");
   const [formData, setFormData] = useState({
     first_name: "",
+    last_name: "",
     phone: "",
     email: "",
     company: "",
@@ -32,6 +36,8 @@ const VisitorCheckIn = () => {
   const [animationComplete, setAnimationComplete] = useState(false);
   const [hostNotified, setHostNotified] = useState(false);
   const [hostSeen, setHostSeen] = useState(false);
+  const [checkoutDisabled, setCheckoutDisabled] = useState(true);
+  const [countdown, setCountdown] = useState(180); // 3 minutes in seconds
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -61,16 +67,34 @@ const VisitorCheckIn = () => {
       const timer = setTimeout(() => {
         setAnimationComplete(true);
         setHostNotified(true);
-        
+
         // Simulate host seeing the request after a few seconds
         setTimeout(() => {
           setHostSeen(true);
         }, 3000);
       }, 2000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [currentStep, animationComplete]);
+
+  // Countdown timer for checkout button
+  useEffect(() => {
+    if (animationComplete && checkoutDisabled) {
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            setCheckoutDisabled(false);
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [animationComplete, checkoutDisabled]);
 
   const startCamera = async () => {
     try {
@@ -90,16 +114,29 @@ const VisitorCheckIn = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
-    
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0);
-    
+
     const imageDataUrl = canvas.toDataURL("image/jpeg");
     setCapturedPhoto(imageDataUrl);
-    
+
     if (video.srcObject) {
       video.srcObject.getTracks().forEach(track => track.stop());
+    }
+
+    // Push to server if signature is skipped (photo taken, signature skipped)
+    if (skipSignature) {
+      console.log("📸 Photo captured and signature skipped - pushing to server");
+      const dataToSend = {
+        ...formData,
+        photo: imageDataUrl,
+        signature: null,
+        hasCar: hasCar,
+        checkin_time: new Date().toISOString(),
+      };
+      sendToServer(dataToSend);
     }
   };
 
@@ -119,6 +156,31 @@ const VisitorCheckIn = () => {
     const canvas = canvasRef.current;
     const imageDataUrl = canvas.toDataURL("image/png");
     setSignature(imageDataUrl);
+
+    // Push to server if photo is skipped but signature is saved
+    if (skipPhoto) {
+      console.log("✍️ Signature saved and photo skipped - pushing to server");
+      const dataToSend = {
+        ...formData,
+        photo: null,
+        signature: imageDataUrl,
+        hasCar: hasCar,
+        checkin_time: new Date().toISOString(),
+      };
+      sendToServer(dataToSend);
+    }
+    // Push to server if both photo and signature are completed (neither skipped)
+    else if (capturedPhoto && !skipSignature) {
+      console.log("📸📝 Both photo and signature completed - pushing to server");
+      const dataToSend = {
+        ...formData,
+        photo: capturedPhoto,
+        signature: imageDataUrl,
+        hasCar: hasCar,
+        checkin_time: new Date().toISOString(),
+      };
+      sendToServer(dataToSend);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -136,11 +198,25 @@ const VisitorCheckIn = () => {
   };
 
   const handleNext = () => {
-    if (!formData.first_name || !formData.phone || !formData.email || 
+    if (!formData.first_name || !formData.last_name || !formData.phone || !formData.email ||
         !formData.company || !formData.purpose || (hasCar && !formData.plate)) {
       alert("Please fill in all required fields");
       return;
     }
+
+    // Push to server if both photo and signature are skipped (default case)
+    if (skipPhoto && skipSignature) {
+      console.log("📝 Form completed and both photo & signature skipped - pushing to server");
+      const dataToSend = {
+        ...formData,
+        photo: null,
+        signature: null,
+        hasCar: hasCar,
+        checkin_time: new Date().toISOString(),
+      };
+      sendToServer(dataToSend);
+    }
+
     setCurrentStep(getNextStep());
   };
 
@@ -154,20 +230,59 @@ const VisitorCheckIn = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    setIsProcessing(true);
-    setStatus("Processing your check-in...");
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setStatus("Check-in complete!");
-    setIsProcessing(false);
-  };
+  const sendToServer = async (data) => {
+    console.log("🚀 Starting backend push to kiosk-checkin endpoint");
+    console.log("📤 Data being sent:", data);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+    try {
+      console.log("🌐 Making fetch request to: http://127.0.0.1:8000/api/visitors/kiosk-checkin/");
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/visitors/kiosk-checkin/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          signal: controller.signal,
+        }
+      );
+
+      console.log("📡 Response status:", res.status);
+      console.log("📡 Response ok:", res.ok);
+
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const responseData = await res.json(); // ✅ Parse the response to get the visitor ID
+        console.log("✅ Backend push successful! Response data:", responseData);
+        setStatus("Checked in successfully!");
+        return responseData; // ✅ Return the response data instead of just true
+      } else {
+        const errorData = await res.text();
+        console.error("❌ API Error:", errorData);
+        console.error("❌ Response status:", res.status);
+        setStatus("Error: Saved Locally");
+        return false;
+      }
+    } catch (err) {
+      if (err.name === "AbortError") {
+        console.error("⏰ Request timed out");
+      } else {
+        console.error("💥 Server error:", err);
+        console.error("💥 Error details:", err.message);
+      }
+      setStatus("Error: Offline fallback");
+      return false;
+    }
+  };
   const resetProcess = () => {
     setCurrentStep("form");
     setFormData({
       first_name: "",
+      last_name: "",
       phone: "",
       email: "",
       company: "",
@@ -365,21 +480,41 @@ const VisitorCheckIn = () => {
                     <span>Basic Information</span>
                   </h3>
                   
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
-                      Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
-                      <input
-                        type="text"
-                        name="first_name"
-                        value={formData.first_name}
-                        onChange={handleInputChange}
-                        className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg"
-                        placeholder="Enter your full name"
-                        required
-                      />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <input
+                          type="text"
+                          name="first_name"
+                          value={formData.first_name}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg"
+                          placeholder="Enter your first name"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                        Last Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <input
+                          type="text"
+                          name="last_name"
+                          value={formData.last_name}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg"
+                          placeholder="Enter your last name"
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -974,7 +1109,7 @@ const VisitorCheckIn = () => {
                         <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl shadow-sm">
                           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Visitor</span>
                           <div className="mt-1 sm:mt-2">
-                            <p className="text-base sm:text-lg font-semibold text-gray-900">{formData.first_name}</p>
+                            <p className="text-base sm:text-lg font-semibold text-gray-900">{formData.first_name} {formData.last_name}</p>
                             <p className="text-xs sm:text-sm text-gray-600">{formData.company}</p>
                           </div>
                         </div>
@@ -1022,11 +1157,13 @@ const VisitorCheckIn = () => {
                 {animationComplete && (
                   <div className="space-y-4 sm:space-y-6">
                     <button
-                      onClick={handleSubmit}
-                      disabled={isProcessing}
+                      onClick={sendToServer}
+                      disabled={isProcessing || checkoutDisabled}
                       className={`w-full py-4 sm:py-6 px-6 sm:px-8 rounded-lg sm:rounded-xl text-lg sm:text-xl font-bold transition-all duration-200 ${
                         isProcessing
                           ? "bg-gray-400 text-white cursor-not-allowed"
+                          : checkoutDisabled
+                          ? "bg-red-600 text-white cursor-not-allowed"
                           : "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                       }`}
                     >
@@ -1034,6 +1171,11 @@ const VisitorCheckIn = () => {
                         <div className="flex items-center justify-center space-x-3">
                           <div className="w-5 h-5 sm:w-6 sm:h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
                           <span>Processing...</span>
+                        </div>
+                      ) : checkoutDisabled ? (
+                        <div className="flex items-center justify-center space-x-3">
+                          <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
+                          <span>Checkout ({Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')})</span>
                         </div>
                       ) : (
                         <div className="flex items-center justify-center space-x-3">

@@ -1,38 +1,64 @@
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip } from 'recharts';
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
+import api from '../api/axios';
 
 // Visitor Management Chart Component
 const VisitorManagementChart = () => {
-  const data = [
-    { month: 'Feb', totalVisitors: 180, checkedIn: 165 },
-    { month: 'Mar', totalVisitors: 220, checkedIn: 205 },
-    { month: 'Apr', totalVisitors: 195, checkedIn: 185 },
-    { month: 'May', totalVisitors: 245, checkedIn: 230 },
-    { month: 'Jun', totalVisitors: 210, checkedIn: 200 },
-    { month: 'Jul', totalVisitors: 280, checkedIn: 270 },
-    { month: 'Aug', totalVisitors: 255, checkedIn: 245 },
-    { month: 'Sep', totalVisitors: 300, checkedIn: 285 },
-    { month: 'Oct', totalVisitors: 275, checkedIn: 260 },
-    { month: 'nov', totalVisitors: 275, checkedIn: 260 },
-    { month: 'dec', totalVisitors: 275, checkedIn: 260 },
-  ];
+  const [data, setData] = useState([]);
 
-  const [animatedData, setAnimatedData] = useState(
-    data.map(item => ({ ...item, totalVisitors: 0, checkedIn: 0 }))
-  );
+  const [animatedData, setAnimatedData] = useState([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimatedData(data);
-    }, 300);
-    return () => clearTimeout(timer);
+    const fetchMonthlyTrends = async () => {
+      try {
+        const response = await api.get('/api/visitors/');
+        if (response.data) {
+          // Compute monthly trends from visitors data
+          const visitors = response.data;
+          const today = new Date();
+          const monthlyTrendsData = [];
+          for (let i = 11; i >= 0; i--) {
+            const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+            const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+            const monthVisitors = visitors.filter(visitor => {
+              const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+              return checkInDate >= monthStart && checkInDate <= monthEnd;
+            });
+
+            monthlyTrendsData.push({
+              month: date.toLocaleDateString('en-US', { month: 'short' }),
+              totalVisitors: monthVisitors.length,
+              checkedIn: monthVisitors.filter(v => v.status === 'checked_in' || v.status === 'Checked In').length
+            });
+          }
+          setData(monthlyTrendsData);
+          setAnimatedData(monthlyTrendsData.map(item => ({ ...item, totalVisitors: 0, checkedIn: 0 })));
+          setTimeout(() => {
+            setAnimatedData(monthlyTrendsData);
+          }, 300);
+        }
+      } catch (error) {
+        console.error('Failed to fetch monthly trends:', error);
+      }
+    };
+
+    fetchMonthlyTrends();
   }, []);
+
+  // Calculate dynamic y-axis domain based on data
+  const maxValue = Math.max(
+    ...animatedData.map(item => Math.max(item.totalVisitors || 0, item.checkedIn || 0)),
+    1 // Minimum value to avoid 0
+  );
+  const yAxisMax = Math.ceil(maxValue + 5); // Add 5 padding to the highest value
 
   return (
     <div className="bg-white w-[fit] rounded-lg shadow-sm border border-gray-100 p-6 h-full">
       <h3 className="text-lg font-semibold text-gray-900 mb-6">Yearly Chart</h3>
-      
+
       <div className="h-64 sm:h-72">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -40,27 +66,45 @@ const VisitorManagementChart = () => {
             margin={{ top: 20, right: 10, left: -20, bottom: 20 }}
             barCategoryGap="20%"
           >
-            <CartesianGrid 
-              strokeDasharray="3 3" 
+            <CartesianGrid
+              strokeDasharray="3 3"
               stroke="#D3D3D3"
               horizontal={true}
               vertical={false}
             />
-            
-            <XAxis 
-              dataKey="month" 
+
+            <XAxis
+              dataKey="month"
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: 12 }}
             />
-            <YAxis 
+            <YAxis
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: 12 }}
-              domain={[0, 320]}
+              domain={[0, yAxisMax]}
             />
-            
-            <Bar 
+
+            <Tooltip
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                      <p className="text-sm font-medium text-gray-900 mb-2">{`${label}`}</p>
+                      {payload.map((entry, index) => (
+                        <p key={index} className="text-sm" style={{ color: entry.color }}>
+                          {`${entry.dataKey === 'totalVisitors' ? 'Total Visitors' : 'Checked In'}: ${entry.value}`}
+                        </p>
+                      ))}
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+
+            <Bar
               dataKey="totalVisitors" 
               fill="#aeb1b5"
               radius={[20, 20, 0, 0]}
@@ -141,27 +185,92 @@ const CircularHeatMap = () => {
   const [peakHours, setPeakHours] = useState([]);
   const [todayTotal, setTodayTotal] = useState(0);
   const [hoveredSegment, setHoveredSegment] = useState(null);
+  const [chartMode, setChartMode] = useState('daily'); // 'daily' or 'weekly'
+  const [chartTitle, setChartTitle] = useState('Daily Traffic');
 
-  const hourLabels = ['8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM'];
-  const maxValue = Math.max(...peakHours.map(item => item.visitors), 1);
+  const svgSize = 200; // Made smaller as requested
 
   useEffect(() => {
-    const mockData = [
-      { hour: '8 AM', visitors: 12 },
-      { hour: '9 AM', visitors: 25 },
-      { hour: '10 AM', visitors: 18 },
-      { hour: '11 AM', visitors: 30 },
-      { hour: '12 PM', visitors: 45 },
-      { hour: '1 PM', visitors: 38 },
-      { hour: '2 PM', visitors: 28 },
-      { hour: '3 PM', visitors: 35 },
-      { hour: '4 PM', visitors: 22 },
-      { hour: '5 PM', visitors: 15 },
-    ];
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/api/visitors/');
+        if (response.data) {
+          const visitors = response.data;
+          const today = new Date();
+          const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-    setPeakHours(mockData);
-    setTodayTotal(mockData.reduce((sum, h) => sum + h.visitors, 0));
+          // Filter today's visitors
+          const todaysVisitors = visitors.filter(visitor => {
+            const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+            return checkInDate >= startOfToday;
+          });
+
+          // Check if there's data for today
+          if (todaysVisitors.length > 0) {
+            // Show daily traffic
+            setChartMode('daily');
+            setChartTitle('Daily Traffic');
+
+            // Compute peak hours for 8 AM to 5 PM
+            const hoursRange = Array.from({ length: 10 }, (_, i) => 8 + i);
+            const peakHoursData = hoursRange.map(hour => {
+              return {
+                hour: `${hour} ${hour < 12 ? 'AM' : 'PM'}`,
+                visitors: todaysVisitors.filter(visitor => {
+                  const checkInHour = new Date(visitor.check_in_time || visitor.created_at).getHours();
+                  return checkInHour === hour;
+                }).length
+              };
+            });
+
+            setPeakHours(peakHoursData);
+            setTodayTotal(todaysVisitors.length);
+          } else {
+            // Show last month's four-week data
+            setChartMode('weekly');
+            setChartTitle('Last Month (4 Weeks)');
+
+            // Get last month's data
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+            const lastMonthVisitors = visitors.filter(visitor => {
+              const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+              return checkInDate >= lastMonth && checkInDate <= lastMonthEnd;
+            });
+
+            // Divide last month into 4 weeks
+            const weeksData = [];
+            for (let week = 0; week < 4; week++) {
+              const weekStart = new Date(lastMonth);
+              weekStart.setDate(week * 7 + 1);
+              const weekEnd = new Date(weekStart);
+              weekEnd.setDate(weekStart.getDate() + 6);
+
+              const weekVisitors = lastMonthVisitors.filter(visitor => {
+                const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+                return checkInDate >= weekStart && checkInDate <= weekEnd;
+              });
+
+              weeksData.push({
+                hour: `Week ${week + 1}`,
+                visitors: weekVisitors.length
+              });
+            }
+
+            setPeakHours(weeksData);
+            setTodayTotal(lastMonthVisitors.length);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      }
+    };
+
+    fetchData();
   }, []);
+
+  const maxValue = Math.max(...peakHours.map(item => item.visitors), 1);
 
   const getSegmentColor = (visitors, maxValue) => {
     const percentage = (visitors / maxValue) * 100;
@@ -222,11 +331,9 @@ const CircularHeatMap = () => {
     };
   };
 
-  const svgSize = 200; // Made smaller as requested
-
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 h-full flex flex-col">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Traffic</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">{chartTitle}</h3>
       
       <div className="flex-1 flex items-center justify-center relative">
         <div className="relative">

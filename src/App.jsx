@@ -29,6 +29,7 @@ import { NotificationProvider } from "./components/NotificationProvider";
 import HostSchedule from "./pages/HostSchedule";
 import NotificationsPage from "./pages/NotificationPage";
 import AddUser from "./pages/AddUser";
+import Settings from "./pages/Settings";
 import Navbar from "./components/Navbar";
 import Dashbaord from "./pages/Dashbaord";
 
@@ -60,9 +61,10 @@ function App() {
         <Route path="/dashboard" element={<Layout />}>
             <Route index element={<Dashbaord />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="adduser" element={<AddUser />} />
-          <Route path="kiosk-checkin" element={<NewKiosk />} />  
+          <Route path="kiosk-checkin" element={<NewKiosk />} />
         </Route>
       </>
     ),

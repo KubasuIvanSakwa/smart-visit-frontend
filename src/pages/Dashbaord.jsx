@@ -45,6 +45,7 @@ import TopNav from "../components/TopNav";
 // ];
 
 const Dashbaord = () => {
+  const { addNotification } = useNotification();
   const [activeTheme, setActiveTheme] = useState("light");
 
   const [loading, setLoading] = useState(true);
@@ -57,7 +58,11 @@ const Dashbaord = () => {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [cacheTimestamp, setCacheTimestamp] = useState(null);
   const initialLoad = useRef(false);
+  const cacheKey = 'dashboard_cache';
+  const cacheExpiry = 5 * 60 * 1000; // 5 minutes
 
   // const handleApproveVisitor = (visitorId) => {
   //   const visitor = pendingList.find(v => v.id === visitorId);
@@ -186,46 +191,153 @@ const Dashbaord = () => {
     </div>
   );
 
-  const fetchData = async () => {
+  // Cache management functions
+  const saveToCache = (data) => {
+    const cacheData = {
+      ...data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    setCacheTimestamp(Date.now());
+  };
+
+  const loadFromCache = () => {
     try {
-      setLoading(true);
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        const now = Date.now();
+        if (now - cacheData.timestamp < cacheExpiry) {
+          setVisitors(cacheData.visitors || []);
+          setPendingApprovals(cacheData.pendingApprovals || []);
+          setPeakHours(cacheData.peakHours || []);
+          setMonthlyTrends(cacheData.monthlyTrends || []);
+          setLastUpdated(new Date(cacheData.timestamp));
+          setCacheTimestamp(cacheData.timestamp);
+          console.log('Loaded dashboard data from cache');
+          return true;
+        } else {
+          localStorage.removeItem(cacheKey);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading from cache:', err);
+    }
+    return false;
+  };
+
+  const fetchData = async (forceRefresh = false) => {
+    try {
+      // Clear any previous errors
       setError(null);
-      addNotification("Loading..", "info");
 
-      const [statsRes, visitorsRes, approvalsRes, hoursRes, trendsRes] =
-        await Promise.all([
-          api.get("/api/dashboard/stats/").catch((err) => {
-            addNotification("Could not load statistics", "warning");
-            return { data: null };
-          }),
-          api.get("/api/dashboard/current-visitors/").catch((err) => {
-            addNotification("Could not load current visitors", "warning");
-            return { data: [] };
-          }),
-          api.get("/api/dashboard/pending-approvals/").catch((err) => {
-            addNotification("Could not load pending approvals", "warning");
-            return { data: [] };
-          }),
-          api.get("/api/dashboard/peak-hours/").catch((err) => {
-            addNotification("Could not load peak hours data", "warning");
-            return { data: [] };
-          }),
-          api.get("/api/dashboard/monthly-trends/").catch((err) => {
-            addNotification("Could not load monthly trends", "warning");
-            return { data: [] };
-          }),
-        ]);
+      if (!forceRefresh && loadFromCache()) {
+        setLoading(false);
+        return;
+      }
 
-      // Set data only if response exists
-      if (statsRes.data) setStats(statsRes.data);
-      if (visitorsRes.data) setVisitors(visitorsRes.data);
-      console.log(visitorsRes.data);
-      if (approvalsRes.data) setPendingApprovals(approvalsRes.data);
-      if (hoursRes.data) setPeakHours(hoursRes.data);
-      if (trendsRes.data) setMonthlyTrends(trendsRes.data);
+      setLoading(true);
+      if (forceRefresh) {
+        setIsRefreshing(true);
+        addNotification("Refreshing data...", "info");
+      } else {
+        addNotification("Loading dashboard data...", "info");
+      }
+
+      const [visitorsRes, approvalsRes] = await Promise.all([
+        api.get("/api/visitors/").catch((err) => {
+          console.error("Visitors API error:", err);
+          addNotification("Could not load visitors", "warning");
+          return { data: [] };
+        }),
+        api.get("/api/dashboard/pending-approvals/").catch((err) => {
+          console.error("Pending approvals API error:", err);
+          addNotification("Could not load pending approvals", "warning");
+          return { data: [] };
+        }),
+      ]);
+
+      // Process visitors data
+      let visitorsData = [];
+      let peakHoursData = [];
+      let monthlyTrendsData = [];
+
+      if (visitorsRes.data && Array.isArray(visitorsRes.data)) {
+        visitorsData = visitorsRes.data;
+        setVisitors(visitorsData);
+        console.log(visitorsData);
+
+        // Compute stats from visitors data
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        const todaysVisitors = visitorsData.filter(visitor => {
+          const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+          return checkInDate >= startOfToday;
+        });
+
+        const monthlyVisitors = visitorsData.filter(visitor => {
+          const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+          return checkInDate >= startOfMonth;
+        });
+
+        // Compute peak hours from today's visitors
+        peakHoursData = Array.from({ length: 24 }, (_, hour) => ({
+          hour: `${hour}:00`,
+          visitors: todaysVisitors.filter(visitor => {
+            const checkInHour = new Date(visitor.check_in_time || visitor.created_at).getHours();
+            return checkInHour === hour;
+          }).length
+        }));
+
+        // Compute monthly trends (last 12 months)
+        monthlyTrendsData = [];
+        for (let i = 11; i >= 0; i--) {
+          const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+          const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+          const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+          const monthVisitors = visitorsData.filter(visitor => {
+            const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+            return checkInDate >= monthStart && checkInDate <= monthEnd;
+          });
+
+          monthlyTrendsData.push({
+            month: date.toLocaleDateString('en-US', { month: 'short' }),
+            totalVisitors: monthVisitors.length,
+            checkedIn: monthVisitors.filter(v => v.status === 'checked_in' || v.status === 'Checked In').length
+          });
+        }
+
+        setPeakHours(peakHoursData);
+        setMonthlyTrends(monthlyTrendsData);
+      }
+
+      // Process pending approvals data
+      let approvalsData = [];
+      if (approvalsRes.data && Array.isArray(approvalsRes.data)) {
+        approvalsData = approvalsRes.data;
+        setPendingApprovals(approvalsData);
+      }
+
+      // Save to cache only if we have some data
+      if (visitorsData.length > 0 || approvalsData.length > 0) {
+        const cacheData = {
+          visitors: visitorsData,
+          pendingApprovals: approvalsData,
+          peakHours: peakHoursData,
+          monthlyTrends: monthlyTrendsData
+        };
+        saveToCache(cacheData);
+      }
 
       setLastUpdated(new Date());
-      addNotification("Dashboard updated successfully", "success");
+      if (forceRefresh) {
+        addNotification("Dashboard refreshed successfully", "success");
+      } else {
+        addNotification("Dashboard loaded successfully", "success");
+      }
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);
       setError("Failed to load dashboard data. Please try again.");
@@ -240,22 +352,40 @@ const Dashbaord = () => {
       }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   const { user } = useAuth();
   const [currentRole, setCurrentRole] = useState("admin");
 
-  //   useEffect(() => {
-  //   if (!initialLoad.current) {
-  //     initialLoad.current = true;
-  //     fetchData();
-  //   }
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    fetchData(true);
+  };
 
-  //   // // Set up polling every 30 seconds
-  //   // const interval = setInterval(fetchData, 30000);
-  //   // return () => clearInterval(interval);
-  // }, []);
+  useEffect(() => {
+    if (!initialLoad.current) {
+      initialLoad.current = true;
+      fetchData();
+    }
+
+    // Set up polling every 30 seconds, but only if cache is expired
+    const interval = setInterval(() => {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        const now = Date.now();
+        if (now - cacheData.timestamp >= cacheExpiry) {
+          fetchData();
+        }
+      } else {
+        fetchData();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCheckOut = async (visitorId) => {
     try {
@@ -347,37 +477,97 @@ const Dashbaord = () => {
     return `${formattedHours}:${formattedMinutes} ${period}`;
   };
 
+  // Calculate today's visitors correctly
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todaysVisitors = visibleVisitors.filter(visitor => {
+    const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+    return checkInDate >= startOfToday;
+  });
+
+  // Calculate yesterday's visitors for trend comparison
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+  const endOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
+  const yesterdaysVisitors = visibleVisitors.filter(visitor => {
+    const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+    return checkInDate >= startOfYesterday && checkInDate <= endOfYesterday;
+  });
+
+  // Calculate this month's visitors
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthlyVisitors = visibleVisitors.filter(visitor => {
+    const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+    return checkInDate >= startOfMonth;
+  });
+
+  // Calculate last month's visitors for trend comparison
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  const lastMonthVisitors = visibleVisitors.filter(visitor => {
+    const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+    return checkInDate >= lastMonth && checkInDate <= lastMonthEnd;
+  });
+
+  // Calculate trends
+  const calculateTrend = (current, previous) => {
+    if (previous === 0) return { num: current > 0 ? "+100%" : "0%", trend: current > 0 ? "up" : "neutral" };
+    const percentChange = ((current - previous) / previous * 100).toFixed(1);
+    const trend = percentChange > 0 ? "up" : percentChange < 0 ? "down" : "neutral";
+    const sign = percentChange > 0 ? "+" : "";
+    return { num: `${sign}${percentChange}%`, trend };
+  };
+
+  const todaysTrend = calculateTrend(todaysVisitors.length, yesterdaysVisitors.length);
+  const monthlyTrend = calculateTrend(monthlyVisitors.length, lastMonthVisitors.length);
+
+  // Calculate average visit duration from actual data
+  const calculateAvgDuration = () => {
+    const checkedOutVisitors = visibleVisitors.filter(v => v.check_out_time && v.check_in_time);
+    if (checkedOutVisitors.length === 0) return "2h 30m";
+
+    const totalDuration = checkedOutVisitors.reduce((total, visitor) => {
+      const checkIn = new Date(visitor.check_in_time);
+      const checkOut = new Date(visitor.check_out_time);
+      const duration = (checkOut - checkIn) / (1000 * 60 * 60); // hours
+      return total + duration;
+    }, 0);
+
+    const avgHours = totalDuration / checkedOutVisitors.length;
+    const hours = Math.floor(avgHours);
+    const minutes = Math.round((avgHours - hours) * 60);
+
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  };
+
+  const avgDuration = calculateAvgDuration();
+
   const statsData = [
     {
       icon: Users,
       title: "Today's Visitors",
-      value: visibleVisitors
-        .filter((v) => v.status !== "Checked Out")
-        .length.toString(),
+      value: todaysVisitors.length.toString(),
       change: {
-        num: "+8%",
+        num: todaysTrend.num,
         text: "from yesterday",
       },
-      trend: "up",
+      trend: todaysTrend.trend,
     },
     {
       icon: UserCheck,
       title: "Total This Month",
-      value: visibleVisitors
-        .filter((v) => v.status !== "Checked Out")
-        .length.toString(),
+      value: monthlyVisitors.length.toString(),
       change: {
-        num: "+15% ",
+        num: monthlyTrend.num,
         text: "from last month",
       },
-      trend: "up",
+      trend: monthlyTrend.trend,
     },
     {
       icon: AlertCircle,
       title: "Currently Pending",
-      value: visiblePendingApprovals
-        .filter((v) => v.status !== "Checked Out")
-        .length.toString(),
+      value: visiblePendingApprovals.length.toString(),
       change: {
         num: "",
         text: "Awaiting approval",
@@ -386,12 +576,11 @@ const Dashbaord = () => {
     {
       icon: Clock,
       title: "Avg Visit Duration",
-      value: "6h",
+      value: avgDuration,
       change: {
-        num: "-12%",
-        text: "from last week",
+        num: "",
+        text: "Based on completed visits",
       },
-      trend: "down",
     },
   ];
 
@@ -402,6 +591,31 @@ const Dashbaord = () => {
         <div className="flex-1 flex flex-col overflow-hidden pr-1">
           {/* Content Area */}
           <div className="flex-1 overflow-auto p-6 h-full pt-[2rem]">
+            {/* Header with refresh button */}
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                {lastUpdated && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Last updated: {lastUpdated.toLocaleString()}
+                    {cacheTimestamp && (
+                      <span className="ml-2 text-xs text-blue-600">
+                        (cached)
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+              >
+                <TrendingUp className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
               {statsData.map((stat, index) => (
@@ -410,7 +624,7 @@ const Dashbaord = () => {
             </div>
             <div className="w-full">
               <ResponsiveChartsContainer />
-              <VisitorsTable />
+              <VisitorsTable visitors={visibleVisitors} />
             </div>
           </div>
         </div>
