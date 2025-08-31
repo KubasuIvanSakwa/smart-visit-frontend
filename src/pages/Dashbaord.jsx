@@ -397,13 +397,11 @@ const Dashbaord = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="flex h-screen bg-gray-50">
+      <div className="relative overflow-y-hidden  flex h-auto bg-gray-50">
         <div className="absolute bottom-4 left-4 right-4"></div>
         <div className="flex-1 flex flex-col overflow-hidden pr-1">
-          <TopNav />
-
           {/* Content Area */}
-          <div className="flex-1 overflow-auto p-6 h-full pt-[7rem]">
+          <div className="flex-1 overflow-auto p-6 h-full pt-[2rem]">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
               {statsData.map((stat, index) => (

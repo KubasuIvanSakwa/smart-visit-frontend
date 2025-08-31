@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft, Phone, Mail, Building2, Clock } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Search, Edit3, MoreVertical } from 'lucide-react';
 
 const VisitorsTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedVisitor, setSelectedVisitor] = useState(null);
-  const itemsPerPage = 8;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const itemsPerPage = 5;
 
-  // Extended visitor data with 20 visitors
+  // Reduced visitor data for demo
   const allVisitors = [
     {
-      id: '#VIS001',
+      id: 'VIS001',
       name: 'Sarah Johnson',
       email: 'sarah.johnson@company.com',
       company: 'TechCorp Inc.',
@@ -17,11 +19,10 @@ const VisitorsTable = () => {
       checkIn: '10:30 AM',
       checkOut: '2:45 PM',
       date: '3-26-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 123-4567'
+      status: 'CO'
     },
     {
-      id: '#VIS002', 
+      id: 'VIS002', 
       name: 'Michael Chen',
       email: 'michael.chen@startup.io',
       company: 'StartupXYZ',
@@ -29,11 +30,10 @@ const VisitorsTable = () => {
       checkIn: '9:15 AM',
       checkOut: '-',
       date: '3-26-2024',
-      status: 'In Meeting',
-      phone: '+1 (555) 234-5678'
+      status: 'IM'
     },
     {
-      id: '#VIS003',
+      id: 'VIS003',
       name: 'Emily Rodriguez',
       email: 'emily.r@consulting.com',
       company: 'Global Consulting',
@@ -41,11 +41,10 @@ const VisitorsTable = () => {
       checkIn: '11:00 AM',
       checkOut: '-',
       date: '3-26-2024',
-      status: 'checked_in',
-      phone: '+1 (555) 345-6789'
+      status: 'CI'
     },
     {
-      id: '#VIS004',
+      id: 'VIS004',
       name: 'David Kim',
       email: 'david.kim@tech.com',
       company: 'Innovation Labs',
@@ -53,11 +52,10 @@ const VisitorsTable = () => {
       checkIn: '1:30 PM',
       checkOut: '4:15 PM',
       date: '3-25-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 456-7890'
+      status: 'CO'
     },
     {
-      id: '#VIS005',
+      id: 'VIS005',
       name: 'Lisa Wang',
       email: 'lisa.wang@design.co',
       company: 'Creative Design Co',
@@ -65,216 +63,22 @@ const VisitorsTable = () => {
       checkIn: '2:00 PM',
       checkOut: '-',
       date: '3-25-2024',
-      status: 'Waiting',
-      phone: '+1 (555) 567-8901'
-    },
-    {
-      id: '#VIS006',
-      name: 'James Wilson',
-      email: 'james.w@finance.com',
-      company: 'Financial Partners',
-      purpose: 'Financial Planning',
-      checkIn: '10:00 AM',
-      checkOut: '12:30 PM',
-      date: '3-25-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 678-9012'
-    },
-    {
-      id: '#VIS007',
-      name: 'Amanda Martinez',
-      email: 'amanda.m@marketing.com',
-      company: 'Marketing Pro',
-      purpose: 'Campaign Review',
-      checkIn: '3:15 PM',
-      checkOut: '-',
-      date: '3-24-2024',
-      status: 'checked_in',
-      phone: '+1 (555) 789-0123'
-    },
-    {
-      id: '#VIS008',
-      name: 'Robert Taylor',
-      email: 'robert.t@logistics.com',
-      company: 'Swift Logistics',
-      purpose: 'Supply Chain Meeting',
-      checkIn: '8:45 AM',
-      checkOut: '11:30 AM',
-      date: '3-24-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 890-1234'
-    },
-    {
-      id: '#VIS009',
-      name: 'Jennifer Brown',
-      email: 'jen.brown@healthcare.org',
-      company: 'HealthTech Solutions',
-      purpose: 'Product Demo',
-      checkIn: '1:00 PM',
-      checkOut: '3:30 PM',
-      date: '3-24-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 901-2345'
-    },
-    {
-      id: '#VIS010',
-      name: 'Alex Thompson',
-      email: 'alex.t@education.edu',
-      company: 'EdTech Institute',
-      purpose: 'Research Collaboration',
-      checkIn: '10:15 AM',
-      checkOut: '-',
-      date: '3-23-2024',
-      status: 'In Meeting',
-      phone: '+1 (555) 012-3456'
-    },
-    {
-      id: '#VIS011',
-      name: 'Maria Garcia',
-      email: 'maria.g@retail.com',
-      company: 'Retail Solutions',
-      purpose: 'System Integration',
-      checkIn: '2:30 PM',
-      checkOut: '5:00 PM',
-      date: '3-23-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 123-4567'
-    },
-    {
-      id: '#VIS012',
-      name: 'Kevin Lee',
-      email: 'kevin.lee@automotive.com',
-      company: 'Auto Innovations',
-      purpose: 'Technology Review',
-      checkIn: '9:00 AM',
-      checkOut: '12:00 PM',
-      date: '3-23-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 234-5678'
-    },
-    {
-      id: '#VIS013',
-      name: 'Rachel Green',
-      email: 'rachel.g@media.com',
-      company: 'Digital Media Corp',
-      purpose: 'Content Strategy',
-      checkIn: '11:30 AM',
-      checkOut: '-',
-      date: '3-22-2024',
-      status: 'Waiting',
-      phone: '+1 (555) 345-6789'
-    },
-    {
-      id: '#VIS014',
-      name: 'Thomas Anderson',
-      email: 'thomas.a@security.com',
-      company: 'CyberSafe Inc.',
-      purpose: 'Security Audit',
-      checkIn: '8:30 AM',
-      checkOut: '4:45 PM',
-      date: '3-22-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 456-7890'
-    },
-    {
-      id: '#VIS015',
-      name: 'Sophie Miller',
-      email: 'sophie.m@legal.com',
-      company: 'Legal Associates',
-      purpose: 'Contract Review',
-      checkIn: '1:45 PM',
-      checkOut: '3:15 PM',
-      date: '3-22-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 567-8901'
-    },
-    {
-      id: '#VIS016',
-      name: 'Carlos Rodriguez',
-      email: 'carlos.r@construction.com',
-      company: 'BuildRight Corp',
-      purpose: 'Project Planning',
-      checkIn: '7:30 AM',
-      checkOut: '10:00 AM',
-      date: '3-21-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 678-9012'
-    },
-    {
-      id: '#VIS017',
-      name: 'Isabella Davis',
-      email: 'isabella.d@hospitality.com',
-      company: 'Hotel Management Plus',
-      purpose: 'Service Review',
-      checkIn: '3:00 PM',
-      checkOut: '-',
-      date: '3-21-2024',
-      status: 'checked_in',
-      phone: '+1 (555) 789-0123'
-    },
-    {
-      id: '#VIS018',
-      name: 'Nathan Wright',
-      email: 'nathan.w@transport.com',
-      company: 'Transport Solutions',
-      purpose: 'Logistics Meeting',
-      checkIn: '12:15 PM',
-      checkOut: '2:30 PM',
-      date: '3-21-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 890-1234'
-    },
-    {
-      id: '#VIS019',
-      name: 'Grace Kim',
-      email: 'grace.k@fashion.com',
-      company: 'Fashion Forward',
-      purpose: 'Brand Collaboration',
-      checkIn: '10:45 AM',
-      checkOut: '-',
-      date: '3-20-2024',
-      status: 'In Meeting',
-      phone: '+1 (555) 901-2345'
-    },
-    {
-      id: '#VIS020',
-      name: 'Daniel White',
-      email: 'daniel.w@energy.com',
-      company: 'Green Energy Corp',
-      purpose: 'Sustainability Talk',
-      checkIn: '2:15 PM',
-      checkOut: '4:00 PM',
-      date: '3-20-2024',
-      status: 'checked_out',
-      phone: '+1 (555) 012-3456'
+      status: 'W'
     }
   ];
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'In Meeting':
-        return 'bg-blue-100 text-blue-800';
-      case 'checked_in':
-        return 'bg-green-100 text-green-800';
-      case 'checked_out':
-        return 'bg-gray-100 text-gray-800';
-      case 'Waiting':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Filter visitors based on search term
+  const filteredVisitors = allVisitors.filter(visitor => 
+    visitor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    visitor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    visitor.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    visitor.purpose.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const formatStatus = (status) => {
-    switch(status) {
-      case 'checked_in':
-        return 'Checked In';
-      case 'checked_out':
-        return 'Checked Out';
-      default:
-        return status;
-    }
-  };
+  // Pagination logic
+  const totalPages = Math.ceil(filteredVisitors.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const visitors = filteredVisitors.slice(startIndex, startIndex + itemsPerPage);
 
   // Generate avatar with initials
   const getAvatar = (name) => {
@@ -292,216 +96,224 @@ const VisitorsTable = () => {
     );
   };
 
-  // Pagination logic
-  const totalPages = Math.ceil(allVisitors.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const visitors = allVisitors.slice(startIndex, startIndex + itemsPerPage);
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      'IM': { text: 'In Meeting', class: 'bg-blue-100 text-blue-800' },
+      'CI': { text: 'Checked In', class: 'bg-green-100 text-green-800' },
+      'CO': { text: 'Checked Out', class: 'bg-gray-100 text-gray-800' },
+      'W': { text: 'Waiting', class: 'bg-yellow-100 text-yellow-800' }
+    };
 
-  const handleVisitorClick = (visitor) => {
-    setSelectedVisitor(visitor);
+    const config = statusConfig[status] || statusConfig['CO'];
+    
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${config.class}`}>
+        <span className="hidden sm:inline">{config.text}</span>
+        <span className="sm:hidden">{status}</span>
+      </span>
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(visitors.map(v => v.id));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleItemSelect = (id) => {
+    if (selectedItems.includes(id)) {
+      setSelectedItems(selectedItems.filter(item => item !== id));
+    } else {
+      setSelectedItems([...selectedItems, id]);
+    }
   };
 
   return (
-    <div className="flex gap-6">
-      {/* Main Table */}
-      <div className="flex-1 bg-white border border-gray-100 rounded-lg overflow-hidden">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-50">
-          <h3 className="text-lg font-medium text-gray-900">Latest Visitors</h3>
-        </div>
-
-        {/* Scrollable Table Container */}
-        <div className="overflow-x-auto overflow-y-hidden scrollbar-hide">
-          {/* Table Header */}
-          <div className="bg-gray-50 px-6 py-3 border-b border-gray-100">
-            <div className="flex items-center text-xs font-medium text-gray-500 uppercase tracking-wider gap-4">
-              <div className="w-16 flex-shrink-0 hidden md:block">ID</div>
-              <div className="w-60 flex-shrink-0">VISITOR</div>
-              <div className="w-32 flex-shrink-0 hidden xl:block">COMPANY</div>
-              <div className="w-20 flex-shrink-0">CHECK IN</div>
-              <div className="w-20 flex-shrink-0 hidden lg:block">CHECK OUT</div>
-              <div className="w-20 flex-shrink-0 hidden lg:block">DATE</div>
-              <div className="w-28 flex-shrink-0">STATUS</div>
-            </div>
+    <div className="rounded-lg shadow-md lg:mt-[-10rem]">
+      {/* Search Header */}
+      <h4 className='font-bold text-xl pl-3'>Visitors</h4>
+      <div className="p-4 border-b border-gray-200">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <Search className="w-4 h-4 text-gray-500" />
           </div>
-
-          {/* Table Body */}
-          <div className="divide-y divide-gray-50">
-            {visitors.map((visitor) => (
-              <div key={visitor.id} className="px-6 py-4 hover:bg-gray-25 transition-colors duration-150 cursor-pointer" onClick={() => handleVisitorClick(visitor)}>
-                <div className="flex items-center gap-4">
-                  {/* ID */}
-                  <div className="text-sm font-medium text-blue-600 whitespace-nowrap w-16 flex-shrink-0 hidden md:block">
-                    {visitor.id}
-                  </div>
-
-                  {/* Visitor Info */}
-                  <div className="flex items-center space-x-3 w-60 flex-shrink-0">
-                    <div className="flex-shrink-0">
-                      {getAvatar(visitor.name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-gray-900 truncate">{visitor.name}</div>
-                      <div className="text-xs text-gray-500 truncate">{visitor.email}</div>
-                    </div>
-                  </div>
-
-                  {/* Company */}
-                  <div className="text-sm text-gray-900 whitespace-nowrap w-32 flex-shrink-0 hidden xl:block">
-                    {visitor.company}
-                  </div>
-
-                  {/* Check In */}
-                  <div className="text-sm text-gray-900 whitespace-nowrap w-20 flex-shrink-0">
-                    {visitor.checkIn}
-                  </div>
-
-                  {/* Check Out */}
-                  <div className="text-sm text-gray-900 whitespace-nowrap w-20 flex-shrink-0 hidden lg:block">
-                    {visitor.checkOut}
-                  </div>
-
-                  {/* Date */}
-                  <div className="text-sm text-gray-900 whitespace-nowrap w-20 flex-shrink-0 hidden lg:block">
-                    {visitor.date}
-                  </div>
-
-                  {/* Status */}
-                  <div className="flex items-center justify-between w-28 flex-shrink-0">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${getStatusColor(visitor.status)}`}>
-                      {formatStatus(visitor.status)}
-                    </span>
-                    {/* <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0 ml-2" /> */}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <input 
+            type="text" 
+            className="block w-full pl-10 pr-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500" 
+            placeholder="Search visitors..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
-
-        {/* Pagination */}
-        {/* Pagination */}
-<div className="px-6 py-4 border-t border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-  {/* Info */}
-  <div className="text-sm text-gray-500">
-    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, allVisitors.length)} of {allVisitors.length} visitors
-  </div>
-
-  {/* Controls */}
-  <div className="flex flex-wrap items-center gap-2">
-    <button
-      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-      disabled={currentPage === 1}
-      className="flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      <ChevronLeft className="h-4 w-4 mr-1" />
-      Previous
-    </button>
-    
-    <div className="flex flex-wrap gap-1">
-      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-        <button
-          key={page}
-          onClick={() => setCurrentPage(page)}
-          className={`px-3 py-1 text-sm rounded-md ${
-            page === currentPage
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-        >
-          {page}
-        </button>
-      ))}
-    </div>
-
-    <button
-      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-      disabled={currentPage === totalPages}
-      className="flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      Next
-      <ChevronRight className="h-4 w-4 ml-1" />
-    </button>
-  </div>
-</div>
-
       </div>
 
-      {/* Visitor Details Card - Hidden on mobile */}
-      <div className="w-80 hidden lg:block">
-        <div className="bg-white border border-gray-100 rounded-lg overflow-hidden sticky top-0">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h3 className="text-lg font-medium text-gray-900">Visitor Details</h3>
+      {/* Table Container with proper scrolling */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left rtl:text-right text-gray-500" style={{minWidth: '600px'}}>
+            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+              <tr>
+                <th scope="col" className="p-4 w-10">
+                  <div className="flex items-center">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      checked={selectAll}
+                      onChange={handleSelectAll}
+                    />
+                    <label className="sr-only">Select all</label>
+                  </div>
+                </th>
+                <th scope="col" className="px-3 py-3 min-w-[200px] sm:min-w-0">
+                  <span className="hidden sm:inline">Visitor Details</span>
+                  <span className="sm:hidden">Visitor</span>
+                </th>
+                <th scope="col" className="px-3 py-3 hidden md:table-cell">
+                  Company
+                </th>
+                <th scope="col" className="px-3 py-3 hidden lg:table-cell">
+                  Purpose
+                </th>
+                <th scope="col" className="px-3 py-3 min-w-[80px]">
+                  <span className="hidden sm:inline">Check In/Out</span>
+                  <span className="sm:hidden">Time</span>
+                </th>
+                <th scope="col" className="px-3 py-3 min-w-[70px]">
+                  Status
+                </th>
+                <th scope="col" className="px-3 py-3 w-20">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {visitors.map((visitor) => (
+                <tr key={visitor.id} className="bg-white border-b border-gray-200 hover:bg-gray-50">
+                  <td className="w-4 p-4">
+                    <div className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                        checked={selectedItems.includes(visitor.id)}
+                        onChange={() => handleItemSelect(visitor.id)}
+                      />
+                      <label className="sr-only">Select visitor</label>
+                    </div>
+                  </td>
+                  <th scope="row" className="px-3 py-4 font-medium text-gray-900">
+                    <div className="flex items-center space-x-3">
+                      {getAvatar(visitor.name)}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold truncate">{visitor.name}</div>
+                        <div className="text-sm text-gray-500 truncate">{visitor.email}</div>
+                        {/* Show company on mobile in visitor details */}
+                        <div className="md:hidden text-xs text-gray-400 truncate mt-1">{visitor.company}</div>
+                      </div>
+                    </div>
+                  </th>
+                  <td className="px-3 py-4 hidden md:table-cell">
+                    <div className="truncate">{visitor.company}</div>
+                  </td>
+                  <td className="px-3 py-4 hidden lg:table-cell">
+                    <div className="text-sm">
+                      <div className="font-medium text-gray-900 truncate">{visitor.purpose}</div>
+                      <div className="text-gray-500">{visitor.date}</div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-4">
+                    <div className="text-xs">
+                      <div className="text-green-600">
+                        <span className="hidden sm:inline">In: </span>
+                        <span className="sm:hidden">I: </span>
+                        {visitor.checkIn}
+                      </div>
+                      <div className="text-red-600">
+                        <span className="hidden sm:inline">Out: </span>
+                        <span className="sm:hidden">O: </span>
+                        {visitor.checkOut}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-4">
+                    {getStatusBadge(visitor.status)}
+                  </td>
+                  <td className="px-3 py-4">
+                    <div className="flex items-center space-x-1">
+                      <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                      <button className="p-1 text-gray-600 hover:bg-gray-50 rounded">
+                        <MoreVertical className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+      {/* Mobile-Friendly Pagination */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex flex-col space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+          <div className="text-sm text-gray-700 text-center sm:text-left">
+            Showing <span className="font-semibold text-gray-900">{startIndex + 1}</span> to{' '}
+            <span className="font-semibold text-gray-900">{Math.min(startIndex + itemsPerPage, filteredVisitors.length)}</span> of{' '}
+            <span className="font-semibold text-gray-900">{filteredVisitors.length}</span> Results
           </div>
           
-          {selectedVisitor ? (
-            <div className="p-6">
-              {/* Avatar and Name */}
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="flex-shrink-0">
-                  {getAvatar(selectedVisitor.name)}
-                </div>
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900">{selectedVisitor.name}</h4>
-                  <p className="text-sm text-gray-500">{selectedVisitor.id}</p>
-                </div>
+          <div className="flex justify-center sm:justify-end">
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="flex items-center justify-center px-3 py-1 text-sm leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Prev</span>
+              </button>
+              
+              <div className="flex">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  let page;
+                  if (totalPages <= 5) {
+                    page = i + 1;
+                  } else if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`flex items-center justify-center px-3 py-1 text-sm leading-tight border ${
+                        page === currentPage
+                          ? 'text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700'
+                          : 'text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
               </div>
-
-              {/* Contact Info */}
-              <div className="space-y-4 mb-6">
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-900">{selectedVisitor.email}</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-900">{selectedVisitor.phone}</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Building2 className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-900">{selectedVisitor.company}</span>
-                </div>
-              </div>
-
-              {/* Visit Details */}
-              <div className="space-y-3 mb-6">
-                <h5 className="text-sm font-medium text-gray-900">Visit Information</h5>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Purpose:</span>
-                    <span className="text-sm text-gray-900">{selectedVisitor.purpose}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Date:</span>
-                    <span className="text-sm text-gray-900">{selectedVisitor.date}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Check In:</span>
-                    <span className="text-sm text-gray-900">{selectedVisitor.checkIn}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Check Out:</span>
-                    <span className="text-sm text-gray-900">{selectedVisitor.checkOut}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="flex items-center justify-center">
-                <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(selectedVisitor.status)}`}>
-                  <Clock className="h-4 w-4 mr-2" />
-                  {formatStatus(selectedVisitor.status)}
-                </span>
-              </div>
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="flex items-center justify-center px-3 py-1 text-sm leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </button>
             </div>
-          ) : (
-            <div className="p-6 text-center text-gray-500">
-              <div className="mb-4">
-                <Building2 className="h-12 w-12 mx-auto text-gray-300" />
-              </div>
-              <p className="text-sm">Click on a visitor to view their details</p>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

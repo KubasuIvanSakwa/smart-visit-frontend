@@ -30,6 +30,8 @@ const LightSidebar = ({
   setSidebarOpen,
   activeNav,
   setActiveNav,
+  logoImage,
+  handleLogoUpload,
 }) => {
   const { addNotification } = useNotification();
     // Initialize state from localStorage or default to true
@@ -55,34 +57,10 @@ const LightSidebar = ({
       console.log("");
     };
 
-    const [logoImage, setLogoImage] = useState(() => {
-      // Also save logo in localStorage
-      const savedLogo = localStorage.getItem("dashspaceLogo");
-      return savedLogo || null;
-    });
-
     // Save to localStorage whenever isExpanded changes
     useEffect(() => {
       localStorage.setItem("sidebarExpanded", JSON.stringify(isExpanded));
     }, [isExpanded]);
-
-    // Save logo to localStorage whenever it changes
-    useEffect(() => {
-      if (logoImage) {
-        localStorage.setItem("dashspaceLogo", logoImage);
-      } else {
-        localStorage.removeItem("dashspaceLogo");
-      }
-    }, [logoImage]);
-
-    const handleLogoUpload = (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => setLogoImage(e.target.result);
-        reader.readAsDataURL(file);
-      }
-    };
 
     const handleToggleExpanded = () => {
       setIsExpanded((prevExpanded) => !prevExpanded);
@@ -90,7 +68,7 @@ const LightSidebar = ({
 
     return (
       <div
-        className={`fixed inset-y-0 left-0 z-50 ${
+        className={`fixed inset-y-0 left-0 z-100 ${
           isExpanded ? "w-65" : "w-16"
         } bg-white transform shadow-lg ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -100,7 +78,7 @@ const LightSidebar = ({
         <div className="flex items-center justify-between h-20 px-4">
           <div className="flex items-center space-x-2">
             {/* Logo */}
-            <div className="relative">
+            <div className="relative hidden sm:block">
               <input
                 type="file"
                 accept="image/*"
@@ -143,7 +121,7 @@ const LightSidebar = ({
           {/* Toggle Button */}
           <button
             onClick={handleToggleExpanded}
-            className="p-1 rounded-full hover:bg-gray-100 bg-white transition-colors"
+            className="hidden md:inline-block p-1 rounded-full hover:bg-gray-100 bg-white transition-colors"
             title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
           >
             <div className="w-4 h-4 border-2 border-gray-400 rounded-full relative">
