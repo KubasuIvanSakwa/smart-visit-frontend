@@ -1,13 +1,7 @@
-# TODO: Create Settings Page and Reorganize Features
-
-## Tasks
-- [x] Create new Settings.jsx page with consolidated features
-- [x] Move notification settings from NewProfile to Settings
-- [x] Move user management from NewProfile to Settings
-- [x] Move security settings from NewProfile to Settings
-- [x] Update App.jsx routing to include Settings page
-- [x] Clean up NewProfile.jsx to only contain profile information
-- [x] Update navigation and sidebar in NewProfile
-- [x] Implement notification popup in TopNav
-- [ ] Test the new Settings page functionality
-- [ ] Update navigation menu to include Settings link
+- [x] Update imports in src/pages/NewLogin.jsx to use lucide-react instead of react-icons
+- [x] Replace FcGoogle with Globe icon from lucide-react
+- [x] Replace FaGithub with Github icon from lucide-react
+- [x] Add localStorage.setItem('selectedVisitor', JSON.stringify(visitor)) on visitor row click in VisitorsTable.jsx
+- [x] Update VisitorDetails.jsx to retrieve visitor data from localStorage
+- [x] Fix "Cannot read properties of undefined (reading 'split')" error in VisitorDetails.jsx
+- [ ] Test the application to ensure icons render correctly

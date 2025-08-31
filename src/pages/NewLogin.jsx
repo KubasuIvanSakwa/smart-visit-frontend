@@ -1,58 +1,38 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, Users } from 'lucide-react';
-import { Link, useNavigate } from 'react-router'; // Uncomment when using with React Router
+import React, { useState } from "react";
+import { Globe, Github } from 'lucide-react'
+import { Link, useNavigate } from 'react-router';
 import api from '../api/axios';
 import { useNotification } from '../components/NotificationProvider'
+import anime4 from '../assets/anime4.png';
+import anime5 from '../assets/anime5.png';
+import anime6 from '../assets/anime6.png';
 
+// Simple routing state management
 const NewLogin = () => {
+  const [currentPage, setCurrentPage] = useState('login');
+  const navigate = useNavigate();
+  const { addNotification } = useNotification();
+
+  const navigateTo = (page) => {
+    setCurrentPage(page);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {currentPage === 'login' && <LoginPage navigate={navigateTo} addNotification={addNotification} />}
+      {currentPage === 'signup' && <SignupPage navigate={navigateTo} addNotification={addNotification} />}
+      {currentPage === 'forgot-password' && <ForgotPasswordPage navigate={navigateTo} />}
+    </div>
+  );
+};
+
+// Login Page Component
+const LoginPage = ({ navigate, addNotification }) => {
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTheme, setActiveTheme] = useState('light');
-  const [error, setError] = useState(false);
-  const { addNotification } = useNotification()
-  // const navigate = useNavigate(); // Uncomment when using with React Router
-
-  const handleSubmit = async (e) => {
-    if (e && e.preventDefault) {
-      e.preventDefault();
-    }
-
-    setIsLoading(true);
-
-    try {
-      
-      //Uncomment when ready to use real API
-    const response = await api.post('/api/token/', {
-    email: formData.username, // now sending email
-    password: formData.password
-});
-
-      
-      const { access, refresh, roles } = response.data;
-      
-      // Store tokens
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('role', roles);      
-      // Navigate to dashboard
-      window.location.href = '/dashboard';
-      
-      
-      
-    } catch (err) {
-      console.error('Login error:', err);
-      addNotification(`${err.message}`, 'error');
-      if(err.status === 401){ setError(true)}
-      console.log(err.status)
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleInputChange = (e) => {
     setFormData({
@@ -61,328 +41,469 @@ const NewLogin = () => {
     });
   };
 
-  const handleDemoLogin = () => {
-    setFormData({
-      username: 'admin@krep.com',
-      password: 'demo123'
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const response = await api.post('/api/token/', {
+        email: formData.email,
+        password: formData.password
+      });
+
+      const { access, refresh, roles } = response.data;
+
+      // Store tokens
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('role', roles);
+
+      // Navigate to dashboard
+      window.location.href = '/dashboard';
+    } catch (err) {
+      console.error('Login error:', err);
+      addNotification(`${err.message || 'Login failed'}`, 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Theme Selector
-  const ThemeSelector = () => (
-    <div className="fixed top-4 right-6 z-50 flex bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-      <button
-        onClick={() => setActiveTheme('light')}
-        className={`px-4 py-2 text-sm font-medium transition-colors ${
-          activeTheme === 'light' 
-            ? 'bg-gray-900 text-white' 
-            : 'text-gray-700 hover:bg-gray-50'
-        }`}
-      >
-        Light
-      </button>
-      <button
-        onClick={() => setActiveTheme('dark')}
-        className={`px-4 py-2 text-sm font-medium transition-colors ${
-          activeTheme === 'dark' 
-            ? 'bg-gray-900 text-white' 
-            : 'text-gray-700 hover:bg-gray-50'
-        }`}
-      >
-        Dark
-      </button>
-    </div>
-  );
-
-return (
-  <div className="min-h-screen">
-    <ThemeSelector />
-
-    {activeTheme === 'light' ? (
-      // Light Theme
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          {/* Logo and Title */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-900 rounded-full mb-6">
-              <Users className="h-8 w-8 text-white" />
-            </div>
-
-            <h1 className="text-3xl font-light text-gray-900 mb-2 tracking-tight">
-              Welcome Back
-            </h1>
-
-            <p className="text-gray-500 text-lg">
-              Sign in to your KREP SmartVisit account
-            </p>
-          </div>
-
-          {/* Login Form */}
-          <div className="bg-white border border-gray-100 rounded-lg p-8 mb-6">
-            {error && <span className='inline-block pb-3 text-red-500'>*wrong credentials</span>}
-            <div className="space-y-6">
-              {/* username */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  username
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all duration-200 text-base"
-                    placeholder="Enter your username"
-                    required
-                  />
-                  <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all duration-200 text-base pr-12"
-                    placeholder="Enter your password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Remember + Forgot */}
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="remember-light"
-                    className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
-                  />
-                  <label htmlFor="remember-light" className="ml-2 text-sm text-gray-600">
-                    Remember me
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => console.log('Navigate to forgot password')}
-                  className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  Forgot password?
-                </button>
-              </div>
-
-              {/* Submit */}
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Signing in...</span>
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-5 h-5" />
-                    <span>Sign In</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Sign Up */}
-          <div className="text-center mb-6">
-            <p className="text-gray-500">
-              Don't have an account?{' '}
-              <button
-                type="button"
-                onClick={() => window.location.href = 'signup'}
-                className="text-gray-700 hover:text-gray-900 cursor-pointer font-medium transition-colors underline"
-              >
-                Sign up
-              </button>
-            </p>
-          </div>
-
-          {/* Demo Credentials */}
-          <div className="p-4 bg-white border border-gray-100 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">
-                Demo Credentials
-              </p>
-              <button
-                type="button"
-                onClick={handleDemoLogin}
-                className="text-xs text-gray-500 hover:text-gray-700 underline transition-colors"
-              >
-                Auto-fill
-              </button>
-            </div>
-            <div className="text-sm text-gray-600 space-y-1">
-              <p><strong>username:</strong> admin@krep.com</p>
-              <p><strong>Password:</strong> demo123</p>
-            </div>
-          </div>
-        </div>
+  return (
+    <div className="min-h-screen flex">
+      {/* Left side - Image/Brand Section (60%) */}
+      <div className="hidden lg:flex lg:w-3/5 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 relative overflow-hidden">
+        <img
+          src={anime4}
+          alt="Branding"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       </div>
-    ) : (
-      // Dark Theme
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          {/* Logo and Title */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-6">
-              <Users className="h-8 w-8 text-black" />
-            </div>
-            <h1 className="text-3xl font-light text-white mb-2 tracking-tight">
-              Welcome Back
-            </h1>
-            <p className="text-gray-400 text-lg">
-              Sign in to your KREP SmartVisit account
-            </p>
+
+      {/* Right side - Login Form (40%) */}
+      <div className="w-full lg:w-2/5 flex items-center justify-center p-8 lg:p-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Sign In</h2>
+            <p className="text-xl text-gray-800">Welcome back to Smart Visit!</p>
+            <p>Please sign in to your account.</p>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-lg p-8 mb-6 space-y-6">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                username
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:border-white focus:ring-1 focus:ring-white transition-all duration-200 text-base text-white placeholder-gray-500"
-                  placeholder="Enter your username"
-                  required
-                />
-                <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
-              </div>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                placeholder="Enter your email"
+                required
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:border-white focus:ring-1 focus:ring-white transition-all duration-200 text-base text-white placeholder-gray-500 pr-12"
-                  placeholder="Enter your password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                placeholder="Enter your password"
+                required
+              />
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center">
                 <input
                   type="checkbox"
-                  id="remember-dark"
-                  className="w-4 h-4 text-white border-gray-600 rounded focus:ring-white bg-gray-800"
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
-                <label htmlFor="remember-dark" className="ml-2 text-sm text-gray-400">
-                  Remember me
-                </label>
-              </div>
-
+                <span className="ml-2 text-sm text-gray-600">Remember me</span>
+              </label>
               <button
                 type="button"
-                onClick={() => console.log('Navigate to forgot password')}
-                className="text-sm text-gray-400 hover:text-gray-300 transition-colors"
+                onClick={() => navigate('forgot-password')}
+                className="text-sm text-indigo-600 hover:text-indigo-800 font-medium hover:underline transition-colors duration-200"
               >
                 Forgot password?
               </button>
             </div>
 
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={isLoading}
-              className="w-full bg-white hover:bg-gray-100 text-black font-medium py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 focus:ring-4 focus:ring-indigo-200 transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50"
             >
-              {isLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  <span>Signing in...</span>
-                </>
-              ) : (
-                <>
-                  <Lock className="w-5 h-5" />
-                  <span>Sign In</span>
-                </>
-              )}
+              {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
-          </form>
+          </div>
 
-          {/* Sign Up */}
-          <div className="text-center mb-6">
-            <p className="text-gray-400">
-              Don't have an account?{' '}
+          <div className="mt-8 text-center">
+            <p className="text-gray-600">
+              Don't have an account?{" "}
               <button
-                type="button"
-                onClick={() => window.location.href = 'signup'}
-                className="text-gray-300 hover:text-white cursor-pointerfont-medium transition-colors underline"
+                onClick={() => navigate('signup')}
+                className="text-indigo-600 hover:text-indigo-800 font-medium hover:underline transition-colors duration-200"
               >
-                Sign up
+                Sign up here
               </button>
             </p>
           </div>
 
-          {/* Demo Credentials */}
-          <div className="p-4 bg-gray-900 border border-gray-800 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                Demo Credentials
-              </p>
-              <button
-                type="button"
-                onClick={handleDemoLogin}
-                className="text-xs text-gray-400 hover:text-gray-300 underline transition-colors"
-              >
-                Auto-fill
-              </button>
+          <div className="mt-8">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+              </div>
             </div>
-            <div className="text-sm text-gray-400 space-y-1">
-              <p><strong>username:</strong> admin@krep.com</p>
-              <p><strong>Password:</strong> demo123</p>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 rounded-xl bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200">
+                <Globe className="w-5 h-5 mr-2" />
+                <span className="font-bold">Google</span>
+              </button>
+
+              <button className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 rounded-xl bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200">
+                <Github className="w-5 h-5 mr-2" />
+                <span className="font-bold">GitHub</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
-    )}
-  </div>
-);
+    </div>
+  );
+};
 
+// Signup Page Component
+const SignupPage = ({ navigate, addNotification }) => {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (formData.password !== formData.confirmPassword) {
+      addNotification('Passwords do not match', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          password2: formData.confirmPassword,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          role: 'user',
+          phone: '',
+          department: 'visitor',
+          job_title: 'audit'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Registration failed');
+      }
+
+      const data = await response.json();
+      addNotification('Registration successful! Please check your email for verification.', 'success');
+      navigate('login');
+    } catch (error) {
+      addNotification(error.message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left side - Image/Brand Section (60%) */}
+      <div className="hidden lg:flex lg:w-3/5 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-500 relative overflow-hidden">
+        <img
+          src={anime5}
+          alt="Branding"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
+
+      {/* Right side - Signup Form (40%) */}
+      <div className="w-full lg:w-2/5 flex items-center justify-center p-8 lg:p-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h2>
+            <p className="text-xl text-gray-800">Get started with your free account today.</p>
+          </div>
+
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                  placeholder="John"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                  placeholder="Doe"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                placeholder="john@company.com"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                placeholder="Create a strong password"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                placeholder="Confirm your password"
+                required
+              />
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                required
+              />
+              <span className="ml-2 text-sm text-gray-600">
+                I agree to the{" "}
+                <a href="#" className="text-emerald-600 hover:text-emerald-800 font-medium hover:underline">
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="#" className="text-emerald-600 hover:text-emerald-800 font-medium hover:underline">
+                  Privacy Policy
+                </a>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 px-4 rounded-xl font-medium hover:from-emerald-700 hover:to-teal-700 focus:ring-4 focus:ring-emerald-200 transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50"
+            >
+              {isLoading ? 'Creating account...' : 'Create Account'}
+            </button>
+          </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-gray-600">
+              Already have an account?{" "}
+              <button
+                onClick={() => navigate('login')}
+                className="text-emerald-600 hover:text-emerald-800 font-medium hover:underline transition-colors duration-200"
+              >
+                Sign in here
+              </button>
+            </p>
+          </div>
+
+          <div className="mt-8">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-50 text-gray-500">Or sign up with</span>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 rounded-xl bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200">
+                <Globe className="w-5 h-5 mr-2" />
+                <span className="font-bold">Google</span>
+              </button>
+
+              <button className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 rounded-xl bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200">
+                <Github className="w-5 h-5 mr-2" />
+                <span className="font-bold">GitHub</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Forgot Password Page Component
+const ForgotPasswordPage = ({ navigate }) => {
+  const [email, setEmail] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Handle forgot password logic here
+    console.log('Password reset request for:', email);
+    setIsSubmitted(true);
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-sm">✓</span>
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Check your email</h2>
+          <p className="text-gray-600 mb-8">
+            We've sent a password reset link to <strong>{email}</strong>
+          </p>
+          <button
+            onClick={() => navigate('login')}
+            className="text-indigo-600 hover:text-indigo-800 font-medium hover:underline transition-colors duration-200"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left side - Image/Brand Section (60%) */}
+      <div className="hidden lg:flex lg:w-3/5 bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-500 relative overflow-hidden">
+        <img
+          src={anime6}
+          alt="Branding"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
+
+      {/* Right side - Forgot Password Form (40%) */}
+      <div className="w-full lg:w-2/5 flex items-center justify-center p-8 lg:p-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Forgot Password?</h2>
+            <p className="text-gray-600">No worries, we'll send you reset instructions.</p>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white"
+                placeholder="Enter your email address"
+                required
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-3 px-4 rounded-xl font-medium hover:from-violet-700 hover:to-purple-700 focus:ring-4 focus:ring-violet-200 transition-all duration-200 transform hover:scale-[1.02]"
+            >
+              Send Reset Instructions
+            </button>
+          </div>
+
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => navigate('login')}
+              className="text-violet-600 hover:text-violet-800 font-medium hover:underline transition-colors duration-200"
+            >
+              ← Back to sign in
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default NewLogin;

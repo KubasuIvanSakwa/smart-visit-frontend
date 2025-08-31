@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useNotification } from "./NotificationProvider";
+import logo from '../assets/logo.png';
 
 import {
   Users,
@@ -38,7 +39,7 @@ const LightSidebar = ({
     const navItems = [
         { id: "dashboard", icon: Home, label: "Dashboard" },
         // { id: 'visitors', icon: Users, label: 'Visitors' },
-        // { id: 'calendar', icon: Calendar, label: 'Calendar' },
+        // // { id: 'calendar', icon: Calendar, label: 'Calendar' },
         // { id: "notifications", icon: Bell, label: "Notifications", count: 3 },
         { id: "kiosk-checkin", icon: MonitorCheck, label: "Kiosk" },
         { id: "adduser", icon: UserPlus, label: "Add User" },
@@ -48,6 +49,11 @@ const LightSidebar = ({
     const [isExpanded, setIsExpanded] = useState(() => {
       const saved = localStorage.getItem("sidebarExpanded");
       return saved !== null ? JSON.parse(saved) : true;
+    });
+
+    const [companyName, setCompanyName] = useState(() => {
+      const saved = localStorage.getItem("companyName");
+      return saved || "Yunovia Group";
     });
 
     const handleLogout = () => {
@@ -61,6 +67,11 @@ const LightSidebar = ({
     useEffect(() => {
       localStorage.setItem("sidebarExpanded", JSON.stringify(isExpanded));
     }, [isExpanded]);
+
+    // Save company name to localStorage
+    useEffect(() => {
+      localStorage.setItem("companyName", companyName);
+    }, [companyName]);
 
     const handleToggleExpanded = () => {
       setIsExpanded((prevExpanded) => !prevExpanded);
@@ -91,37 +102,35 @@ const LightSidebar = ({
                 className="block w-[2.5rem] h-[2.5rem] bg-gradient-to-br border overflow-hidden rounded cursor-pointer hover:opacity-80 transition-opacity"
                 title="Click to upload logo"
               >
-                {logoImage ? (
-                  <div className="relative">
-                    <img
-                      src={logoImage}
-                      alt="Logo"
-                      className="w-[2.5rem] h-[2.5rem] rounded object-cover"
-                    />
-                    {/* {<div className="absolute z-4 top-1 left-1 bg-white rounded-full flex justify-center items-center p-1">
-                     <PencilLine className="w-[1.3rem]"/>
-                    </div>} */}
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                    YN
-                  </div>
-                )}
+                <div className="relative">
+                  <img
+                    src={logo}
+                    alt="Logo"
+                    className="w-[2.5rem] h-[2.5rem] rounded object-contain"
+                  />
+                  {/* {<div className="absolute z-4 top-1 left-1 bg-white rounded-full flex justify-center items-center p-1">
+                   <PencilLine className="w-[1.3rem]"/>
+                  </div>} */}
+                </div>
               </label>
             </div>
 
             {/* DashSpace Text */}
             {isExpanded && (
-              <h2 className="text-lg font-semibold text-gray-900 transition-opacity duration-200">
-                Yunovia Group
-              </h2>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="text-lg font-semibold text-gray-900 bg-transparent border-none outline-none max-w-32 truncate"
+                placeholder="Company Name"
+              />
             )}
           </div>
 
           {/* Toggle Button */}
           <button
             onClick={handleToggleExpanded}
-            className="hidden md:inline-block p-1 rounded-full hover:bg-gray-100 bg-white transition-colors"
+            className="hidden md:inline-block p-1 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
             title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
           >
             <div className="w-4 h-4 border-2 border-gray-400 rounded-full relative">
@@ -182,7 +191,7 @@ const LightSidebar = ({
           {/* Map through your existing navItems */}
           {navItems
             .filter((item) =>
-              ["notifications", "kiosk-checkin", "adduser"].includes(item.id)
+              ["visitors", "notifications", "kiosk-checkin", "adduser"].includes(item.id)
             )
             .map((item) => (
               <Link

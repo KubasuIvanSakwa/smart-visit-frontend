@@ -1,10 +1,28 @@
 import React, { useState } from "react";
 import { Search, Cog as Settings, Bell, X, CheckCircle, AlertCircle, Info } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import logo from '../assets/logo.png';
 
 export default function TopNav({ sidebarOpen, setSidebarOpen, logoImage }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const navigate = useNavigate();
+
+  const searchableItems = [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Kiosk', path: '/kiosk-checkin' },
+    { label: 'Add User', path: '/adduser' },
+    { label: 'Analytics', path: '/analytics' },
+    { label: 'Settings', path: '/dashboard/settings' },
+    { label: 'Profile', path: '/dashboard/profile' },
+    { label: 'Notifications', path: '/dashboard/notifications' },
+  ];
+
+  const filteredItems = searchableItems.filter(item =>
+    item.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Sample notifications data - in a real app, this would come from an API
   const [notifications, setNotifications] = useState([
@@ -183,14 +201,14 @@ export default function TopNav({ sidebarOpen, setSidebarOpen, logoImage }) {
 
       <div className="sticky top-0 left-0 right-0 border-white/20 bg-white/10 backdrop-blur-xl backdrop-saturate-150 z-50 px-2 sm:px-6 py-6 h-[5rem]">
         <div className="flex items-center justify-center h-[3.8rem] bg-transparent">
-          <div className="flex items-center justify-between z-10 p-2 h-full w-[100%] overflow-hidden rounded-md shadow-sm bg-white">
+          <div className="flex items-center justify-between z-10 p-2 h-full w-[100%] rounded-md shadow-sm bg-white">
             {/* Logo for small screens */}
-            <div className="flex items-center sm:hidden mr-2">
+            <div className="flex items-center md:hidden mr-2">
               {logoImage ? (
                 <img
                   src={logoImage}
                   alt="Logo"
-                  className="w-[2.5rem] h-[2.5rem] rounded object-cover"
+                  className="w-[2.5rem] h-[2.5rem] rounded object-fill"
                 />
               ) : (
                 <div className="w-[2.5rem] h-[2.5rem] bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
@@ -200,12 +218,40 @@ export default function TopNav({ sidebarOpen, setSidebarOpen, logoImage }) {
             </div>
 
             {/* Search */}
-            <div className="flex items-center flex-1 min-w-0 mr-1 sm:mr-2">
+            <div className="flex items-center flex-1 min-w-0 mr-1 sm:mr-2 relative">
               <Search className="h-4 w-4 text-gray-500 ml-1 sm:ml-3 opacity-50" />
               <input
+                value={searchQuery}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  setShowSearchResults(value.length > 0);
+                }}
+                onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
                 className="outline-none px-1 sm:px-2 text-sm placeholder:text-gray-400"
                 placeholder="Search..."
               />
+              {showSearchResults && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-40 max-h-60 overflow-y-auto">
+                  {filteredItems.length > 0 ? (
+                    filteredItems.map((item, index) => (
+                      <Link
+                        key={index}
+                        to={item.path}
+                        onClick={() => {
+                          setShowSearchResults(false);
+                          setSearchQuery('');
+                        }}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        {item.label}
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-sm text-gray-500">No results found</div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right side */}
@@ -235,12 +281,12 @@ export default function TopNav({ sidebarOpen, setSidebarOpen, logoImage }) {
 
               {/* Profile avatar */}
               <Link to="/dashboard/profile" className="w-9 h-9 rounded-full overflow-hidden border border-blue-800 cursor-pointer right-[2rem] p-1">
-                <div className="bg-yellow-700 w-full h-full rounded-full"></div>
+                <img src={logo} alt="Profile" className="w-full h-full rounded-full object-cover" />
               </Link>
 
               {/* Hamburger menu for small screens */}
               <button
-                className="sm:hidden ml-2 p-1 rounded hover:bg-gray-100"
+                className="md:hidden ml-2 p-1 rounded hover:bg-gray-100"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 aria-label="Toggle sidebar"
               >

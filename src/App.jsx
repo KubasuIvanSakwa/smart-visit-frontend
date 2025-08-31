@@ -65,6 +65,7 @@ function App() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="adduser" element={<AddUser />} />
           <Route path="kiosk-checkin" element={<NewKiosk />} />
+          <Route path="visitors" element={<VisitorDetails />} />
         </Route>
       </>
     ),

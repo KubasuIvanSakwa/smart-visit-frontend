@@ -357,7 +357,9 @@ const Dashbaord = () => {
   };
 
   const { user } = useAuth();
-  const [currentRole, setCurrentRole] = useState("admin");
+  const [currentRole, setCurrentRole] = useState(() => {
+    return localStorage.getItem('role') || 'admin';
+  });
 
   // Manual refresh function
   const handleManualRefresh = () => {
@@ -584,6 +586,43 @@ const Dashbaord = () => {
     },
   ];
 
+  // If user is a host, show only the visitors table
+  if (currentRole === "host") {
+    return (
+      <div className="min-h-screen">
+        <div className="relative overflow-y-hidden flex h-auto bg-gray-50">
+          <div className="absolute bottom-4 left-4 right-4"></div>
+          <div className="flex-1 flex flex-col overflow-hidden pr-1">
+            {/* Content Area */}
+            <div className="flex-1 overflow-auto p-6 h-full pt-[2rem]">
+              {/* Header */}
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">My Visitors</h1>
+                <p className="text-gray-600">View and manage visitors assigned to you</p>
+                {lastUpdated && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Last updated: {lastUpdated.toLocaleString()}
+                    {cacheTimestamp && (
+                      <span className="ml-2 text-xs text-blue-600">
+                        (cached)
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              {/* Visitors Table */}
+              <div className="w-full">
+                <VisitorsTable visitors={visibleVisitors} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Admin/Full dashboard view
   return (
     <div className="min-h-screen">
       <div className="relative overflow-y-hidden  flex h-auto bg-gray-50">
