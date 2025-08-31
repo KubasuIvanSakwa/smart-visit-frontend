@@ -60,7 +60,7 @@ const Settings = () => {
     }
 
     try {
-      const response = await axios.get('http://localhost:8000/api/auth/users/', {
+      const response = await axios.get('http://https://smart-visit-backend.onrender.com/api/auth/users/', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(response.data);
@@ -109,7 +109,7 @@ const Settings = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await axios.post('http://localhost:8000/api/auth/users/', newUserForm, {
+      const response = await axios.post('http://https://smart-visit-backend.onrender.com/api/auth/users/', newUserForm, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
