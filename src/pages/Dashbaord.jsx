@@ -1,9 +1,36 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Users, Clock, TrendingUp, Download, UserCheck, UserX, UserPlus, AlertCircle, User, MonitorCheck, LogOut, ChevronRight, Home, BarChart3, Settings, Calendar, Bell, Menu, X } from 'lucide-react';
-import { Link } from 'react-router';
-import { useNotification } from '../components/NotificationProvider';
-import { useAuth } from '../context/AuthContext';
-import api from '../api/axios';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Users,
+  Clock,
+  TrendingUp,
+  Download,
+  UserCheck,
+  Search,
+  UserPlus,
+  AlertCircle,
+  User,
+  MonitorCheck,
+  LogOut,
+  ChevronRight,
+  Home,
+  BarChart3,
+  Calendar,
+  Bell,
+  Menu,
+  X,
+  Cog as Settings,
+  MessageCircleMore,
+} from "lucide-react";
+import { Link, Outlet } from "react-router";
+import { useNotification } from "../components/NotificationProvider";
+import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
+import LightSidebar from "../components/LightSidebar";
+import LightStatsCard from "../components/LightStatsCard";
+import DailyChart from "./ResponsiveChartsContainer";
+import ResponsiveChartsContainer from "./ResponsiveChartsContainer";
+import VisitorsTable from "../components/VisitorsTable";
+import TopNav from "../components/TopNav";
 
 // Sample data
 // const currentVisitors = [
@@ -18,9 +45,8 @@ import api from '../api/axios';
 // ];
 
 const Dashbaord = () => {
-  const [activeTheme, setActiveTheme] = useState('light');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeNav, setActiveNav] = useState('dashboard');
+  const { addNotification } = useNotification();
+  const [activeTheme, setActiveTheme] = useState("light");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,168 +57,75 @@ const Dashbaord = () => {
   const [monthlyTrends, setMonthlyTrends] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const { addNotification } = useNotification();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const initialLoad = useRef(false)
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [cacheTimestamp, setCacheTimestamp] = useState(null);
+  const initialLoad = useRef(false);
+  const cacheKey = 'dashboard_cache';
+  const cacheExpiry = 5 * 60 * 1000; // 5 minutes
 
-  const handleApproveVisitor = (visitorId) => {
-    const visitor = pendingList.find(v => v.id === visitorId);
-    if (visitor) {
-      setPendingList(pendingList.filter(v => v.id !== visitorId));
-      setVisitorList([...visitorList, {
-        ...visitor,
-        checkIn: 'Pending Arrival',
-        status: 'Approved',
-        type: 'Approved'
-      }]);
-    }
-  };
+  // const handleApproveVisitor = (visitorId) => {
+  //   const visitor = pendingList.find(v => v.id === visitorId);
+  //   if (visitor) {
+  //     setPendingList(pendingList.filter(v => v.id !== visitorId));
+  //     setVisitorList([...visitorList, {
+  //       ...visitor,
+  //       checkIn: 'Pending Arrival',
+  //       status: 'Approved',
+  //       type: 'Approved'
+  //     }]);
+  //   }
+  // };
 
-  const handleRejectVisitor = (visitorId) => {
-    setPendingList(pendingList.filter(v => v.id !== visitorId));
-  };
-
-
-  const navItems = [
-    { id: 'dashboard', icon: Home, label: 'Dashboard' },
-    // { id: 'visitors', icon: Users, label: 'Visitors' },
-    // { id: 'calendar', icon: Calendar, label: 'Calendar' },
-    { id: 'notifications', icon: Bell, label: 'Notifications', count: 3 },
-    { id: 'kiosk-checkin', icon: MonitorCheck , label: 'Kiosk', count: 5 },
-    { id: 'adduser', icon: UserPlus, label: 'Add User', count: 5 },
-    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
-    { id: 'profile', icon: Settings, label: 'Settings' },
-  ];
-
-  // Light Theme Components
-  const LightSidebar = () => (
-    <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
-      <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-        <h2 className="text-lg font-medium text-gray-900">VMS Portal</h2>
-        <button 
-          onClick={() => setSidebarOpen(false)}
-          className="lg:hidden p-1 rounded hover:bg-gray-100"
-        >
-          <X className="h-5 w-5 text-gray-500" />
-        </button>
-      </div>
-      <nav className="px-4 flex flex-col  pt-3">
-          {navItems.map((item) => (
-            <Link
-              key={item.id}
-              to={`/${item.id}`}
-              onClick={() => setActiveNav(item.id)}
-              className={`w-full relative flex items-center px-4 py-3 text-sm font-medium rounded-lg mb-1 transition-colors overflow-hidden ${
-                activeNav === item.id
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <item.icon className="mr-3 h-5 w-5" />
-              {item.label}
-             {item.label === 'Notifications' && <span className='absolute bg-red-500 w-[0.6rem] h-[0.6rem] top-[0.5rem] left-[1.5rem] rounded-full inline-block'></span>}
-            </Link>
-          ))}
-
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center bottom-0 px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-200/20 hover:bg-opacity-20 rounded-lg transition-colors"
-          >
-          <LogOut className="mr-3 h-5 w-5" />
-          Logout
-        </button>
-
-      </nav>
-    </div>
-  );
-
-  const LightStatsCard = ({ icon: Icon, title, value, change, trend }) => (
-    <div className="bg-white border border-gray-100 p-6 transition-all duration-200 hover:border-gray-200 hover:shadow-sm">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm text-gray-500 font-medium mb-1">{title}</p>
-          <p className="text-2xl font-light text-gray-900 mb-1">{value}</p>
-          {change && (
-            <p className={`text-xs flex items-center ${
-              trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-400'
-            }`}>
-              {trend === 'up' && <TrendingUp className="h-3 w-3 mr-1" />}
-              {change}
-            </p>
-          )}
-        </div>
-        <div className="ml-4 p-2 bg-gray-50 rounded-lg">
-          <Icon className="h-5 w-5 text-gray-400" />
-        </div>
-      </div>
-    </div>
-  );
+  // const handleRejectVisitor = (visitorId) => {
+  //   setPendingList(pendingList.filter(v => v.id !== visitorId));
+  // };
 
   const LightVisitorTable = ({ title, data }) => (
-      <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-50">
-          <h3 className="text-sm font-medium text-gray-900 uppercase tracking-wide">{title}</h3>
-        </div>
-        <div className="divide-y divide-gray-50">
-          {data.map((visitor) => (
-            <div onClick={() => window.location.href = `dashboard/visitor/${visitor.id}`} key={visitor.id} className="px-6 cursor-pointer hover:bg-gray-200 py-4 hover:bg-gray-25 transition-colors duration-150">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-900 mb-1">{`${visitor.first_name} ${visitor.last_name}`}</div>
-                  <div className="text-xs text-gray-500 mb-1">{visitor.company}</div>
-                  <div className="text-xs text-gray-400">{visitor.purpose}</div>
+    <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-50">
+        <h3 className="text-sm font-medium text-gray-900 uppercase tracking-wide">
+          {title}
+        </h3>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {data.map((visitor) => (
+          <div
+            onClick={() =>
+              (window.location.href = `dashboard/visitor/${visitor.id}`)
+            }
+            key={visitor.id}
+            className="px-6 cursor-pointer hover:bg-gray-200 py-4 hover:bg-gray-25 transition-colors duration-150"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-sm font-medium text-gray-900 mb-1">{`${visitor.first_name} ${visitor.last_name}`}</div>
+                <div className="text-xs text-gray-500 mb-1">
+                  {visitor.company}
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className={`px-2 py-1 rounded-full text-xs ${
-                    visitor.status === 'In Meeting' ? 'bg-blue-100 text-blue-800' :
-                    visitor.status === 'checked_in' ? 'bg-green-100 text-green-800' :
-                    visitor.status === 'checked_ut' ? 'bg-gray-100 text-gray-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {visitor.status}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    {visitor.checkIn}
-                  </div>
-                  <ChevronRight className="h-3 w-3 text-gray-300" />
+                <div className="text-xs text-gray-400">{visitor.purpose}</div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div
+                  className={`px-2 py-1 rounded-full text-xs ${
+                    visitor.status === "In Meeting"
+                      ? "bg-blue-100 text-blue-800"
+                      : visitor.status === "checked_in"
+                      ? "bg-green-100 text-green-800"
+                      : visitor.status === "checked_ut"
+                      ? "bg-gray-100 text-gray-800"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}
+                >
+                  {visitor.status}
                 </div>
+                <div className="text-xs text-gray-400">{visitor.checkIn}</div>
+                <ChevronRight className="h-3 w-3 text-gray-300" />
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-    );
-  
-
-  // Dark Theme Components
-  const DarkSidebar = () => (
-    <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 border-r border-gray-800 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
-      <div className="flex items-center justify-between h-16 px-6 border-b border-gray-800">
-        <h2 className="text-lg font-medium text-white">VMS Portal</h2>
-        <button 
-          onClick={() => setSidebarOpen(false)}
-          className="lg:hidden p-1 rounded hover:bg-gray-800"
-        >
-          <X className="h-5 w-5 text-gray-400" />
-        </button>
-      </div>
-      <nav className="mt-8 px-4">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveNav(item.id)}
-            className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg mb-1 transition-colors ${
-              activeNav === item.id
-                ? 'bg-gray-800 text-white'
-                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-            }`}
-          >
-            <item.icon className="mr-3 h-5 w-5" />
-            {item.label}
-            <span className='bg-red-500 w-[2rem] h-[2rem] inline-block'>3</span>
-          </button>
+          </div>
         ))}
-      </nav>
+      </div>
     </div>
   );
 
@@ -203,10 +136,16 @@ const Dashbaord = () => {
           <p className="text-sm text-gray-400 font-medium mb-1">{title}</p>
           <p className="text-2xl font-light text-white mb-1">{value}</p>
           {change && (
-            <p className={`text-xs flex items-center ${
-              trend === 'up' ? 'text-green-400' : trend === 'down' ? 'text-red-400' : 'text-gray-500'
-            }`}>
-              {trend === 'up' && <TrendingUp className="h-3 w-3 mr-1" />}
+            <p
+              className={`text-xs flex items-center ${
+                trend === "up"
+                  ? "text-green-400"
+                  : trend === "down"
+                  ? "text-red-400"
+                  : "text-gray-500"
+              }`}
+            >
+              {trend === "up" && <TrendingUp className="h-3 w-3 mr-1" />}
               {change}
             </p>
           )}
@@ -221,14 +160,21 @@ const Dashbaord = () => {
   const DarkTable = ({ title, data, showHost = true }) => (
     <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-800">
-        <h3 className="text-sm font-medium text-gray-100 uppercase tracking-wide">{title}</h3>
+        <h3 className="text-sm font-medium text-gray-100 uppercase tracking-wide">
+          {title}
+        </h3>
       </div>
       <div className="divide-y divide-gray-800">
         {data.map((item, index) => (
-          <div key={index} className="px-6 py-4 hover:bg-gray-800 transition-colors duration-150">
+          <div
+            key={index}
+            className="px-6 py-4 hover:bg-gray-800 transition-colors duration-150"
+          >
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-sm font-medium text-gray-100 mb-1">{item.name}</div>
+                <div className="text-sm font-medium text-gray-100 mb-1">
+                  {item.name}
+                </div>
                 <div className="text-xs text-gray-400">{item.company}</div>
               </div>
               {showHost && (
@@ -245,332 +191,483 @@ const Dashbaord = () => {
     </div>
   );
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        addNotification('Loading..', 'info');
-        
-        const [statsRes, visitorsRes, approvalsRes, hoursRes, trendsRes] = await Promise.all([
-          api.get('/api/dashboard/stats/').catch(err => {
-            addNotification('Could not load statistics', 'warning');
-            return { data: null };
-          }),
-          api.get('/api/dashboard/current-visitors/').catch(err => {
-            addNotification('Could not load current visitors', 'warning');
-            return { data: [] };
-          }),
-          api.get('/api/dashboard/pending-approvals/').catch(err => {
-            addNotification('Could not load pending approvals', 'warning');
-            return { data: [] };
-          }),
-          api.get('/api/dashboard/peak-hours/').catch(err => {
-            addNotification('Could not load peak hours data', 'warning');
-            return { data: [] };
-          }),
-          api.get('/api/dashboard/monthly-trends/').catch(err => {
-            addNotification('Could not load monthly trends', 'warning');
-            return { data: [] };
-          })
-        ]);
-  
-        // Set data only if response exists
-        if (statsRes.data) setStats(statsRes.data);
-        if (visitorsRes.data) setVisitors(visitorsRes.data);
-        console.log(visitorsRes.data)
-        if (approvalsRes.data) setPendingApprovals(approvalsRes.data);
-        if (hoursRes.data) setPeakHours(hoursRes.data);
-        if (trendsRes.data) setMonthlyTrends(trendsRes.data);
-  
-        setLastUpdated(new Date());
-        addNotification('Dashboard updated successfully', 'success');
-  
-      } catch (err) {
-        console.error('Failed to fetch dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again.');
-        addNotification('Failed to load dashboard data', 'error');
-        
-        // If unauthorized, redirect to login
-        if (err.response?.status === 401) {
-          addNotification('Session expired - redirecting to login', 'error');
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          window.location.href = '/login';
-        }
-      } finally {
-        setLoading(false);
-      }
+  // Cache management functions
+  const saveToCache = (data) => {
+    const cacheData = {
+      ...data,
+      timestamp: Date.now()
     };
-  
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    setCacheTimestamp(Date.now());
+  };
 
-    const { user } = useAuth();
-    const [currentRole, setCurrentRole] = useState('admin');
+  const loadFromCache = () => {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        const now = Date.now();
+        if (now - cacheData.timestamp < cacheExpiry) {
+          setVisitors(cacheData.visitors || []);
+          setPendingApprovals(cacheData.pendingApprovals || []);
+          setPeakHours(cacheData.peakHours || []);
+          setMonthlyTrends(cacheData.monthlyTrends || []);
+          setLastUpdated(new Date(cacheData.timestamp));
+          setCacheTimestamp(cacheData.timestamp);
+          console.log('Loaded dashboard data from cache');
+          return true;
+        } else {
+          localStorage.removeItem(cacheKey);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading from cache:', err);
+    }
+    return false;
+  };
 
+  const fetchData = async (forceRefresh = false) => {
+    try {
+      // Clear any previous errors
+      setError(null);
 
-  
-  
-    useEffect(() => {
+      if (!forceRefresh && loadFromCache()) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      if (forceRefresh) {
+        setIsRefreshing(true);
+        addNotification("Refreshing data...", "info");
+      } else {
+        addNotification("Loading dashboard data...", "info");
+      }
+
+      const [visitorsRes, approvalsRes] = await Promise.all([
+        api.get("/api/visitors/").catch((err) => {
+          console.error("Visitors API error:", err);
+          addNotification("Could not load visitors", "warning");
+          return { data: [] };
+        }),
+        api.get("/api/dashboard/pending-approvals/").catch((err) => {
+          console.error("Pending approvals API error:", err);
+          addNotification("Could not load pending approvals", "warning");
+          return { data: [] };
+        }),
+      ]);
+
+      // Process visitors data
+      let visitorsData = [];
+      let peakHoursData = [];
+      let monthlyTrendsData = [];
+
+      if (visitorsRes.data && Array.isArray(visitorsRes.data)) {
+        visitorsData = visitorsRes.data;
+        setVisitors(visitorsData);
+        console.log(visitorsData);
+
+        // Compute stats from visitors data
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        const todaysVisitors = visitorsData.filter(visitor => {
+          const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+          return checkInDate >= startOfToday;
+        });
+
+        const monthlyVisitors = visitorsData.filter(visitor => {
+          const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+          return checkInDate >= startOfMonth;
+        });
+
+        // Compute peak hours from today's visitors
+        peakHoursData = Array.from({ length: 24 }, (_, hour) => ({
+          hour: `${hour}:00`,
+          visitors: todaysVisitors.filter(visitor => {
+            const checkInHour = new Date(visitor.check_in_time || visitor.created_at).getHours();
+            return checkInHour === hour;
+          }).length
+        }));
+
+        // Compute monthly trends (last 12 months)
+        monthlyTrendsData = [];
+        for (let i = 11; i >= 0; i--) {
+          const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+          const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+          const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+          const monthVisitors = visitorsData.filter(visitor => {
+            const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+            return checkInDate >= monthStart && checkInDate <= monthEnd;
+          });
+
+          monthlyTrendsData.push({
+            month: date.toLocaleDateString('en-US', { month: 'short' }),
+            totalVisitors: monthVisitors.length,
+            checkedIn: monthVisitors.filter(v => v.status === 'checked_in' || v.status === 'Checked In').length
+          });
+        }
+
+        setPeakHours(peakHoursData);
+        setMonthlyTrends(monthlyTrendsData);
+      }
+
+      // Process pending approvals data
+      let approvalsData = [];
+      if (approvalsRes.data && Array.isArray(approvalsRes.data)) {
+        approvalsData = approvalsRes.data;
+        setPendingApprovals(approvalsData);
+      }
+
+      // Save to cache only if we have some data
+      if (visitorsData.length > 0 || approvalsData.length > 0) {
+        const cacheData = {
+          visitors: visitorsData,
+          pendingApprovals: approvalsData,
+          peakHours: peakHoursData,
+          monthlyTrends: monthlyTrendsData
+        };
+        saveToCache(cacheData);
+      }
+
+      setLastUpdated(new Date());
+      if (forceRefresh) {
+        addNotification("Dashboard refreshed successfully", "success");
+      } else {
+        addNotification("Dashboard loaded successfully", "success");
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+      setError("Failed to load dashboard data. Please try again.");
+      addNotification("Failed to load dashboard data", "error");
+
+      // If unauthorized, redirect to login
+      if (err.response?.status === 401) {
+        addNotification("Session expired - redirecting to login", "error");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        window.location.href = "/login";
+      }
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const { user } = useAuth();
+  const [currentRole, setCurrentRole] = useState(() => {
+    return localStorage.getItem('role') || 'admin';
+  });
+
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    fetchData(true);
+  };
+
+  useEffect(() => {
     if (!initialLoad.current) {
       initialLoad.current = true;
       fetchData();
     }
-    
-    // // Set up polling every 30 seconds
-    // const interval = setInterval(fetchData, 30000);
-    // return () => clearInterval(interval);
+
+    // Set up polling every 30 seconds, but only if cache is expired
+    const interval = setInterval(() => {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        const now = Date.now();
+        if (now - cacheData.timestamp >= cacheExpiry) {
+          fetchData();
+        }
+      } else {
+        fetchData();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
-  
-   const handleCheckOut = async (visitorId) => {
-      try {
-        await api.post(`/api/visitors/${visitorId}/checkout`);
-        fetchData(); // Refresh data
-      } catch (err) {
-        console.error('Failed to check out visitor:', err);
-        setError('Failed to check out visitor. Please try again.');
-      }
-    };
-  
-    const handleApprove = async (requestId) => {
-      try {
-        await api.post(`/api/visitors/approve/${requestId}`);
-        fetchData(); // Refresh data
-      } catch (err) {
-        console.error('Failed to approve request:', err);
-        setError('Failed to approve request. Please try again.');
-      }
-    };
-  
-    const handleReject = async (requestId) => {
-      try {
-        await api.post(`/api/visitors/reject/${requestId}`);
-        fetchData(); // Refresh data
-      } catch (err) {
-        console.error('Failed to reject request:', err);
-        setError('Failed to reject request. Please try again.');
-      }
-    };
-  
-  
-     const getVisibleVisitors = () => {
-      if (currentRole === 'host') {
-        return visitors.filter(v => v.host === user?.name);
-      }
-      return visitors;
-    };
-  
-    const getVisiblePendingApprovals = () => {
-      if (currentRole === 'host') {
-        return pendingApprovals.filter(v => v.host === user?.name);
-      }
-      return pendingApprovals;
-    };
-  
-    const visibleVisitors = getVisibleVisitors();
-    localStorage.setItem('visibleVisitors', JSON.stringify(visibleVisitors));
-    // console.log(`${visibleVisitors[0]?.first_name} ${visibleVisitors[0]?.last_name}`)
-    console.log(`${visibleVisitors}`)
-    const visiblePendingApprovals = getVisiblePendingApprovals();
-  
-  
-     const formatDuration = (duration) => {
-    if (!duration) return '0sec';
-  
+
+  const handleCheckOut = async (visitorId) => {
+    try {
+      await api.post(`/api/visitors/${visitorId}/checkout`);
+      fetchData(); // Refresh data
+    } catch (err) {
+      console.error("Failed to check out visitor:", err);
+      setError("Failed to check out visitor. Please try again.");
+    }
+  };
+
+  const handleApprove = async (requestId) => {
+    try {
+      await api.post(`/api/visitors/approve/${requestId}`);
+      fetchData(); // Refresh data
+    } catch (err) {
+      console.error("Failed to approve request:", err);
+      setError("Failed to approve request. Please try again.");
+    }
+  };
+
+  const handleReject = async (requestId) => {
+    try {
+      await api.post(`/api/visitors/reject/${requestId}`);
+      fetchData(); // Refresh data
+    } catch (err) {
+      console.error("Failed to reject request:", err);
+      setError("Failed to reject request. Please try again.");
+    }
+  };
+
+  const getVisibleVisitors = () => {
+    if (currentRole === "host") {
+      return visitors.filter((v) => v.host === user?.name);
+    }
+    return visitors;
+  };
+
+  const getVisiblePendingApprovals = () => {
+    if (currentRole === "host") {
+      return pendingApprovals.filter((v) => v.host === user?.name);
+    }
+    return pendingApprovals;
+  };
+
+  const visibleVisitors = getVisibleVisitors();
+  localStorage.setItem("visibleVisitors", JSON.stringify(visibleVisitors));
+  // console.log(`${visibleVisitors[0]?.first_name} ${visibleVisitors[0]?.last_name}`)
+  console.log(`${visibleVisitors}`);
+  const visiblePendingApprovals = getVisiblePendingApprovals();
+
+  const formatDuration = (duration) => {
+    if (!duration) return "0sec";
+
     // Handle Django format: HH:MM:SS.microseconds
-    if (typeof duration === 'string') {
-      const [timePart] = duration.split('.');
-      const parts = timePart.split(':').map(Number); // Convert to numbers
-  
+    if (typeof duration === "string") {
+      const [timePart] = duration.split(".");
+      const parts = timePart.split(":").map(Number); // Convert to numbers
+
       if (parts.length === 3) {
         const [hours, minutes, seconds] = parts;
-  
-        let result = '';
+
+        let result = "";
         if (hours > 0) result += `${hours}hr `;
         if (minutes > 0) result += `${minutes}min `;
-        if (seconds > 0 || result === '') result += `${seconds}sec`;
-  
+        if (seconds > 0 || result === "") result += `${seconds}sec`;
+
         return result.trim();
       }
-  
+
       return timePart;
     }
-  
-    return '0sec';
-  }
-  
+
+    return "0sec";
+  };
+
   const formatCheckinTime = (datetimeString) => {
-    if (!datetimeString) return '';
-  
+    if (!datetimeString) return "";
+
     const date = new Date(datetimeString);
-  
+
     const hours = date.getHours();
     const minutes = date.getMinutes();
-    const period = hours >= 12 ? 'PM' : 'AM';
-  
-    const formattedHours = (hours % 12) || 12; // convert 0 to 12
-    const formattedMinutes = minutes.toString().padStart(2, '0');
-  
+    const period = hours >= 12 ? "PM" : "AM";
+
+    const formattedHours = hours % 12 || 12; // convert 0 to 12
+    const formattedMinutes = minutes.toString().padStart(2, "0");
+
     return `${formattedHours}:${formattedMinutes} ${period}`;
   };
 
-  const statsData = [
-    { icon: Users, title: 'Today\'s Visitors', value: visibleVisitors.filter(v => v.status !== 'Checked Out').length.toString(), change: '+8% from yesterday', trend: 'up' },
-    { icon: UserCheck, title: 'Total This Month', value: visibleVisitors.filter(v => v.status !== 'Checked Out').length.toString(), change: '+15% from last month', trend: 'up' },
-    { icon: AlertCircle, title: 'Currently Pending', value: visiblePendingApprovals.filter(v => v.status !== 'Checked Out').length.toString(), change: 'Awaiting approval' },
-    { icon: Clock, title: 'Avg Visit Duration', value: '6h', change: '-12% from last week', trend: 'down' },
-    { icon: TrendingUp, title: 'Monthly Growth', value: '+13%', change: 'vs last month', trend: 'up' },
-    { icon: UserPlus, title: 'New Registrations', value: '0', change: 'This week' }
-  ];
+  // Calculate today's visitors correctly
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todaysVisitors = visibleVisitors.filter(visitor => {
+    const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+    return checkInDate >= startOfToday;
+  });
 
-  const handleLogout = () => {
-    addNotification('Logged out', 'warning');
-    localStorage.clear();
-    window.location.href = '/login';
-    console.log('');
+  // Calculate yesterday's visitors for trend comparison
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+  const endOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
+  const yesterdaysVisitors = visibleVisitors.filter(visitor => {
+    const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+    return checkInDate >= startOfYesterday && checkInDate <= endOfYesterday;
+  });
+
+  // Calculate this month's visitors
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthlyVisitors = visibleVisitors.filter(visitor => {
+    const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+    return checkInDate >= startOfMonth;
+  });
+
+  // Calculate last month's visitors for trend comparison
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  const lastMonthVisitors = visibleVisitors.filter(visitor => {
+    const checkInDate = new Date(visitor.check_in_time || visitor.created_at);
+    return checkInDate >= lastMonth && checkInDate <= lastMonthEnd;
+  });
+
+  // Calculate trends
+  const calculateTrend = (current, previous) => {
+    if (previous === 0) return { num: current > 0 ? "+100%" : "0%", trend: current > 0 ? "up" : "neutral" };
+    const percentChange = ((current - previous) / previous * 100).toFixed(1);
+    const trend = percentChange > 0 ? "up" : percentChange < 0 ? "down" : "neutral";
+    const sign = percentChange > 0 ? "+" : "";
+    return { num: `${sign}${percentChange}%`, trend };
   };
 
+  const todaysTrend = calculateTrend(todaysVisitors.length, yesterdaysVisitors.length);
+  const monthlyTrend = calculateTrend(monthlyVisitors.length, lastMonthVisitors.length);
 
+  // Calculate average visit duration from actual data
+  const calculateAvgDuration = () => {
+    const checkedOutVisitors = visibleVisitors.filter(v => v.check_out_time && v.check_in_time);
+    if (checkedOutVisitors.length === 0) return "2h 30m";
+
+    const totalDuration = checkedOutVisitors.reduce((total, visitor) => {
+      const checkIn = new Date(visitor.check_in_time);
+      const checkOut = new Date(visitor.check_out_time);
+      const duration = (checkOut - checkIn) / (1000 * 60 * 60); // hours
+      return total + duration;
+    }, 0);
+
+    const avgHours = totalDuration / checkedOutVisitors.length;
+    const hours = Math.floor(avgHours);
+    const minutes = Math.round((avgHours - hours) * 60);
+
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  };
+
+  const avgDuration = calculateAvgDuration();
+
+  const statsData = [
+    {
+      icon: Users,
+      title: "Today's Visitors",
+      value: todaysVisitors.length.toString(),
+      change: {
+        num: todaysTrend.num,
+        text: "from yesterday",
+      },
+      trend: todaysTrend.trend,
+    },
+    {
+      icon: UserCheck,
+      title: "Total This Month",
+      value: monthlyVisitors.length.toString(),
+      change: {
+        num: monthlyTrend.num,
+        text: "from last month",
+      },
+      trend: monthlyTrend.trend,
+    },
+    {
+      icon: AlertCircle,
+      title: "Currently Pending",
+      value: visiblePendingApprovals.length.toString(),
+      change: {
+        num: "",
+        text: "Awaiting approval",
+      },
+    },
+    {
+      icon: Clock,
+      title: "Avg Visit Duration",
+      value: avgDuration,
+      change: {
+        num: "",
+        text: "Based on completed visits",
+      },
+    },
+  ];
+
+  // If user is a host, show only the visitors table
+  if (currentRole === "host") {
+    return (
+      <div className="min-h-screen">
+        <div className="relative overflow-y-hidden flex h-auto bg-gray-50">
+          <div className="absolute bottom-4 left-4 right-4"></div>
+          <div className="flex-1 flex flex-col overflow-hidden pr-1">
+            {/* Content Area */}
+            <div className="flex-1 overflow-auto p-6 h-full pt-[2rem]">
+              {/* Header */}
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">My Visitors</h1>
+                <p className="text-gray-600">View and manage visitors assigned to you</p>
+                {lastUpdated && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Last updated: {lastUpdated.toLocaleString()}
+                    {cacheTimestamp && (
+                      <span className="ml-2 text-xs text-blue-600">
+                        (cached)
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              {/* Visitors Table */}
+              <div className="w-full">
+                <VisitorsTable visitors={visibleVisitors} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Admin/Full dashboard view
   return (
     <div className="min-h-screen">
-      {/* Theme Selector
-      <div className="fixed top-[3rem]   right-6 z-50 flex bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-        <button
-          onClick={() => setActiveTheme('light')}
-          className={`px-4 py-2 text-sm font-medium transition-colors  ${
-            activeTheme === 'light' 
-              ? 'bg-gray-900 text-white' 
-              : 'text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          Light
-        </button>
-        <button
-          onClick={() => setActiveTheme('dark')}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
-            activeTheme === 'dark' 
-              ? 'bg-gray-900 text-white' 
-              : 'text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          Dark
-        </button>
-      </div> */}
+      <div className="relative overflow-y-hidden  flex h-auto bg-gray-50">
+        <div className="absolute bottom-4 left-4 right-4"></div>
+        <div className="flex-1 flex flex-col overflow-hidden pr-1">
+          {/* Content Area */}
+          <div className="flex-1 overflow-auto p-6 h-full pt-[2rem]">
+            {/* Header with refresh button */}
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                {lastUpdated && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Last updated: {lastUpdated.toLocaleString()}
+                    {cacheTimestamp && (
+                      <span className="ml-2 text-xs text-blue-600">
+                        (cached)
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+              >
+                <TrendingUp className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
 
-      {activeTheme === 'light' ? (
-        // Light Theme Layout
-        <div className="flex h-screen bg-gray-50">
-          <LightSidebar />
-          
-
-          <div className="absolute bottom-4 left-4 right-4">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
+              {statsData.map((stat, index) => (
+                <LightStatsCard key={index} {...stat} />
+              ))}
+            </div>
+            <div className="w-full">
+              <ResponsiveChartsContainer />
+              <VisitorsTable visitors={visibleVisitors} />
+            </div>
+          </div>
+        </div>
       </div>
-          {/* Overlay for mobile */}
-          {sidebarOpen && (
-            <div 
-              className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-
-          {/* Main Content */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Top Bar */}
-            <div className="bg-white border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <button
-                    onClick={() => setSidebarOpen(true)}
-                    className="lg:hidden mr-4 p-1 rounded hover:bg-gray-100"
-                  >
-                    <Menu className="h-5 w-5 text-gray-500" />
-                  </button>
-                  <h1 className="text-2xl font-light text-gray-900">Dashboard</h1>
-                </div>
-                <p className="text-gray-500 text-sm">Monitor visitor activity and system performance</p>
-              </div>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 overflow-auto p-6">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {statsData.map((stat, index) => (
-                  <LightStatsCard key={index} {...stat} />
-                ))}
-              </div>
-
-              {/* Tables */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {visiblePendingApprovals > 0 ? <LightTable title="Pending Approvals" data={visiblePendingApprovals} />:  <div className="text-gray-500">No Pending Approvals</div>}
-                <LightVisitorTable title="Current Visitors" data={visibleVisitors} />
-              </div>
-
-              {/* Action Button */}
-              <div className="flex justify-end">
-                <button className="flex items-center space-x-2 px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
-                  <Download className="h-4 w-4" />
-                  <span>Export Report</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        // Dark Theme Layout
-        <div className="flex h-screen bg-black">
-          <DarkSidebar />
-          
-          {/* Overlay for mobile */}
-          {sidebarOpen && (
-            <div 
-              className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-
-          {/* Main Content */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Top Bar */}
-            <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <button
-                    onClick={() => setSidebarOpen(true)}
-                    className="lg:hidden mr-4 p-1 rounded hover:bg-gray-800"
-                  >
-                    <Menu className="h-5 w-5 text-gray-400" />
-                  </button>
-                  <h1 className="text-2xl font-light text-white">Dashboard</h1>
-                </div>
-                <p className="text-gray-400 text-sm">Monitor visitor activity and system performance</p>
-              </div>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 overflow-auto p-6">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {statsData.map((stat, index) => (
-                  <DarkStatsCard key={index} {...stat} />
-                ))}
-              </div>
-
-              {/* Tables */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <DarkTable title="Pending Approvals" data={pendingApprovals} />
-                <DarkTable title="Current Visitors" data={currentVisitors} />
-              </div>
-
-              {/* Action Button */}
-              <div className="flex justify-end">
-                <button className="flex items-center space-x-2 px-6 py-3 bg-white text-black text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors">
-                  <Download className="h-4 w-4" />
-                  <span>Export Report</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

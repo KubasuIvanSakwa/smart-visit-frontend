@@ -1,204 +1,106 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Search,
-  Camera,
-  User,
-  Phone,
-  Clock,
-  FileText,
-  CheckCircle,
-  UserPlus,
-  RotateCcw,
-  ChevronRight,
-  Undo,
-  Redo,
-  ArrowLeft,
-  Building,
-  Mail,
-  Target,
-  Timer,
-  Badge,
-  Wifi,
-  WifiOff,
-  Car,
-} from "lucide-react";
+  ArrowLeft, UserCheck, Camera, Edit3, CheckCircle, FileText, User,
+  Phone, Mail, Building, Car, MapPin, Target, Timer, Users, ChevronRight,
+  X, Check, AlertCircle, RotateCcw, Badge, Clock, Wifi, WifiOff
+} from 'lucide-react';
+import api from '../api/axios';
+import { useNotification } from '../components/NotificationProvider';
+import axios from 'axios';
 
-import axios from "axios";
-import { useNotification } from "../components/NotificationProvider";
-import { form } from "framer-motion/client";
-
-const NewKiosk = () => {
+const VisitorCheckIn = () => {
   const [currentStep, setCurrentStep] = useState("form");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isWalkIn, setIsWalkIn] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
-  const [signature, setSignature] = useState(null);
-  const [status, setStatus] = useState("Idle");
-  const { addNotification } = useNotification();
-  const [users, setUsers] = useState([]);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [formData, setFormData] = useState({
     first_name: "",
+    last_name: "",
     phone: "",
-    plate: "",
     email: "",
     company: "",
+    plate: "",
     purpose: "",
-    hostname: "",
-    badgenumber: "",
-    expectedduration: "30",
+    expectedduration: "60",
     host_id: "",
-    host_name: "", // ✅ This is correct
+    host_name: ""
   });
-
-  const canvasRef = useRef(null);
-  const videoRef = useRef(null);
+  
+  const [hasCar, setHasCar] = useState(null);
+  const [skipPhoto, setSkipPhoto] = useState(false);
+  const [skipSignature, setSkipSignature] = useState(false);
+  const [skipHost, setSkipHost] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [signature, setSignature] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [status, setStatus] = useState("Ready to check in");
+  const [isOnline, setIsOnline] = useState(true);
+  const [animationComplete, setAnimationComplete] = useState(false);
+  const [hostNotified, setHostNotified] = useState(false);
+  const [hostSeen, setHostSeen] = useState(false);
+  const [checkoutDisabled, setCheckoutDisabled] = useState(true);
+  const [countdown, setCountdown] = useState(180); // 3 minutes in seconds
 
-  // Network connection handling
-  useEffect(() => {
-    const handleConnectionChange = () => {
-      setIsOnline(navigator.onLine);
-      if (navigator.onLine) {
-        // syncPendingCheckins();
-        // syncOfflineCheckins();
-      }
-    };
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
-    window.addEventListener("online", handleConnectionChange);
-    window.addEventListener("offline", handleConnectionChange);
-
-    // Try to sync when component mounts and we're online
-    if (navigator.onLine) {
-      // syncPendingCheckins();
-      // syncOfflineCheckins();
-    }
-
-    handleFetchUsers();
-
-    return () => {
-      window.removeEventListener("online", handleConnectionChange);
-      window.removeEventListener("offline", handleConnectionChange);
-    };
-  }, []);
-
-  const sendToServer = async (data) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
-
-    try {
-      const res = await fetch(
-        "https://smart-visit-backend.onrender.com/api/visitors/kiosk-checkin/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-          signal: controller.signal,
-        }
-      );
-
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const responseData = await res.json(); // ✅ Parse the response to get the visitor ID
-        setStatus("Checked in successfully!");
-        return responseData; // ✅ Return the response data instead of just true
-      } else {
-        const errorData = await res.text();
-        console.error("API Error:", errorData);
-        setStatus("Error: Saved Locally");
-        return false;
-      }
-    } catch (err) {
-      if (err.name === "AbortError") {
-        console.error("Request timed out");
-      } else {
-        console.error("Server error:", err);
-      }
-      setStatus("Error: Offline fallback");
-      return false;
-    }
-  };
-
-  // Mock data for demonstration
-  const preRegisteredVisitors = [
-    {
-      id: 1,
-      name: "John Smith",
-      phone: "+1234567890",
-      company: "Tech Corp",
-      purpose: "Meeting",
-      hostName: "Sarah Johnson",
-    },
-    {
-      id: 2,
-      name: "Alice Brown",
-      phone: "+1234567891",
-      company: "Design Co",
-      purpose: "Interview",
-      hostName: "Mike Davis",
-    },
-    {
-      id: 3,
-      name: "Bob Wilson",
-      phone: "+1234567892",
-      company: "StartUp Inc",
-      purpose: "Presentation",
-      hostName: "Emma Thompson",
-    },
+  // Mock users data
+  const users = [
+    { id: 1, first_name: "John", last_name: "Smith" },
+    { id: 2, first_name: "Sarah", last_name: "Johnson" },
+    { id: 3, first_name: "Mike", last_name: "Brown" },
+    { id: 4, first_name: "Lisa", last_name: "Davis" }
   ];
 
-  const filteredVisitors = preRegisteredVisitors.filter(
-    (visitor) =>
-      visitor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      visitor.phone.includes(searchQuery) ||
-      visitor.company.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name === "host_id") {
-      const selectedHost = users.find((user) => user.id.toString() === value);
-      setFormData((prev) => ({
-        ...prev,
-        host_id: selectedHost?.id || "",
-        host_name: selectedHost
-          ? `${selectedHost.first_name} ${selectedHost.last_name}`
-          : "", // ✅ Fixed
-      }));
-      // ✅ Use setTimeout to log updated state
-      setTimeout(() => {
-        console.log("Updated formData:", formData);
-      }, 0);
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+  useEffect(() => {
+    if (currentStep === "photo" && !skipPhoto) {
+      startCamera();
     }
-  };
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [currentStep, skipPhoto]);
 
-  const handleVisitorSelect = (visitor) => {
-    setFormData({
-      ...formData,
-      first_name: visitor.first_name,
-      phone: visitor.phone,
-      company: visitor.company,
-      purpose: visitor.purpose,
-      hostname: visitor.hostname,
-    });
-  };
+  useEffect(() => {
+    if (currentStep === "complete" && !animationComplete) {
+      // Simulate processing and host notification
+      const timer = setTimeout(() => {
+        setAnimationComplete(true);
+        setHostNotified(true);
 
-  const handleWalkInRegistration = () => {
-    setIsWalkIn(true);
-    setCurrentStep("form");
-  };
+        // Simulate host seeing the request after a few seconds
+        setTimeout(() => {
+          setHostSeen(true);
+        }, 3000);
+      }, 2000);
 
-  // Camera functions
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, animationComplete]);
+
+  // Countdown timer for checkout button
+  useEffect(() => {
+    if (animationComplete && checkoutDisabled) {
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            setCheckoutDisabled(false);
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [animationComplete, checkoutDisabled]);
+
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: 640, height: 480 } 
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraActive(true);
@@ -209,23 +111,32 @@ const NewKiosk = () => {
   };
 
   const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      const context = canvas.getContext("2d");
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0);
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
 
-      const dataURL = canvas.toDataURL("image/png");
-      setCapturedPhoto(dataURL);
+    const imageDataUrl = canvas.toDataURL("image/jpeg");
+    setCapturedPhoto(imageDataUrl);
 
-      // Stop camera
-      const stream = video.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach((track) => track.stop());
-      setCameraActive(false);
+    if (video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop());
+    }
+
+    // Push to server if signature is skipped (photo taken, signature skipped)
+    if (skipSignature) {
+      console.log("📸 Photo captured and signature skipped - pushing to server");
+      const dataToSend = {
+        ...formData,
+        photo: imageDataUrl,
+        signature: null,
+        hasCar: hasCar,
+        checkin_time: new Date().toISOString(),
+      };
+      sendToServer(dataToSend);
     }
   };
 
@@ -234,563 +145,751 @@ const NewKiosk = () => {
     startCamera();
   };
 
-  // Signature functions
   const clearSignature = () => {
-    if (canvasRef.current) {
-      const canvas = canvasRef.current;
-      const context = canvas.getContext("2d");
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      setSignature(null);
-    }
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    setSignature(null);
   };
 
   const saveSignature = () => {
-    if (canvasRef.current) {
-      const dataURL = canvasRef.current.toDataURL("image/png");
-      setSignature(dataURL);
+    const canvas = canvasRef.current;
+    const imageDataUrl = canvas.toDataURL("image/png");
+    setSignature(imageDataUrl);
+
+    // Push to server if photo is skipped but signature is saved
+    if (skipPhoto) {
+      console.log("✍️ Signature saved and photo skipped - pushing to server");
+      const dataToSend = {
+        ...formData,
+        photo: null,
+        signature: imageDataUrl,
+        hasCar: hasCar,
+        checkin_time: new Date().toISOString(),
+      };
+      sendToServer(dataToSend);
+    }
+    // Push to server if both photo and signature are completed (neither skipped)
+    else if (capturedPhoto && !skipSignature) {
+      console.log("📸📝 Both photo and signature completed - pushing to server");
+      const dataToSend = {
+        ...formData,
+        photo: capturedPhoto,
+        signature: imageDataUrl,
+        hasCar: hasCar,
+        checkin_time: new Date().toISOString(),
+      };
+      sendToServer(dataToSend);
     }
   };
 
-  const resetProcess = () => {
-    setCurrentStep("form");
-    // setSearchQuery("");
-    setIsWalkIn(false);
-    setCapturedPhoto(null);
-    setSignature(null);
-    setStatus("Idle");
-    setFormData({
-      first_name: "",
-      phone: "",
-      email: "",
-      plate: "",
-      company: "",
-      purpose: "",
-      hostname: "",
-      badgenumber: "",
-      expectedduration: "30",
-      host_id: "",
-      host_name: "", // ✅ Reset this too
-    });
-  };
-
-  const handleFetchUsers = async () => {
-try {
-      const response = await axios.get(
-        "https://smart-visit-backend.onrender.com/api/auth/users/",
-      );
-
-      if (response.status === 200) {
-        // ✅ Filter only hosts
-        const hostUsers = response.data.filter((user) => user.role === "host");
-        setUsers(hostUsers);
-        // addNotification("Hosts loaded successfully!", "success");
-        // console.log("Host users loaded:", hostUsers);
-      } else {
-        throw new Error("Unexpected response from server.");
-      }
-    } catch (error) {
-      console.error(error);
-      // addNotification(
-      //   error.response?.data?.message ||
-      //     error.message ||
-      //     "Failed to fetch users.",
-      //   "error"
-      // );
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "host_id") {
+      const selectedUser = users.find(user => user.id === parseInt(value));
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        host_name: selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : ""
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
-  const handleSubmit = async () => {
-    // ✅ Better validation
-    if (!formData.first_name || !formData.phone || !formData.host_id) {
-      alert("Name, Phone, and Host selection are required");
+  const handleNext = () => {
+    if (!formData.first_name || !formData.last_name || !formData.phone || !formData.email ||
+        !formData.company || !formData.purpose || (hasCar && !formData.plate)) {
+      alert("Please fill in all required fields");
       return;
     }
 
-    setStatus("Processing...");
+    // Push to server if both photo and signature are skipped (default case)
+    if (skipPhoto && skipSignature) {
+      console.log("📝 Form completed and both photo & signature skipped - pushing to server");
+      const dataToSend = {
+        ...formData,
+        photo: null,
+        signature: null,
+        hasCar: hasCar,
+        checkin_time: new Date().toISOString(),
+      };
+      sendToServer(dataToSend);
+    }
 
-    // ✅ Log formData before submitting
-    console.log("Submitting formData:", formData);
+    setCurrentStep(getNextStep());
+  };
 
-    const visitorData = {
-      ...formData,
-      last_name: formData.last_name || "-",
-      photo: capturedPhoto,
-      signature: signature,
-      check_in_time: new Date().toISOString(),
-      status: "checked_in",
-      visitor_type: "walk_in",
-    };
-
-    // ✅ Log complete visitor data
-    console.log("Complete visitor data being sent:", visitorData);
-
-    try {
-      if (!navigator.onLine) {
-        setStatus("Offline: Saved Locally");
-      } else {
-        // 1. First send visitor data to server
-        const visitorResponse = await sendToServer(visitorData);
-
-        if (visitorResponse && visitorResponse.id) {
-          // 2. Then send comprehensive notifications
-          const notificationPayload = {
-            visitor_id: visitorResponse.id,
-            host_id: formData.host_id,
-            message: `Visitor ${formData.first_name} has checked in.`,
-            channels: ["email", "pusher"],
-            data: {
-              check_in_time: new Date().toISOString(),
-              location: formData.location || "Main Reception",
-            },
-          };
-
-          // Send to your notification endpoint
-          await axios.post(
-            "https://smart-visit-backend.onrender.com/api/notifications/bulk_notify/",
-            notificationPayload,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-
-          setStatus("Check-in successful!");
-        }
-      }
-    } catch (error) {
-      console.error("Error during check-in:", error);
-      setStatus("Error occurred - please try again");
-    } finally {
-      setTimeout(() => {
-        resetProcess();
-      }, 3000);
+  const handleSkipConfirm = (stepType) => {
+    if (stepType === "photo") {
+      setSkipPhoto(true);
+      setCurrentStep(getNextStep());
+    } else if (stepType === "signature") {
+      setSkipSignature(true);
+      setCurrentStep("complete");
     }
   };
 
-  useEffect(() => {
-    if (currentStep === "photo" && !capturedPhoto) {
-      startCamera();
-    }
-  }, [currentStep]);
+  const sendToServer = async (data) => {
+    console.log("🚀 Starting backend push to kiosk-checkin endpoint");
+    console.log("📤 Data being sent:", data);
 
-  const StepIndicator = () => (
-    <div className="bg-white border border-gray-100 p-4 mb-6">
-      <div className="flex items-center justify-between max-w-2xl mx-auto">
-        {[
-          { id: "form", icon: FileText, label: "Details" },
-          { id: "photo", icon: Camera, label: "Photo" },
-          { id: "signature", icon: FileText, label: "Signature" },
-          { id: "complete", icon: CheckCircle, label: "Complete" },
-        ].map((step, index) => (
-          <div key={step.id} className="flex items-center">
-            <div
-              className={`flex items-center space-x-2 ${
-                currentStep === step.id ? "text-gray-900" : "text-gray-400"
-              }`}
-            >
-              <step.icon className="h-4 w-4" />
-              <span className="text-sm font-medium hidden sm:block">
-                {step.label}
-              </span>
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+    try {
+      console.log("🌐 Making fetch request to: http://127.0.0.1:8000/api/visitors/kiosk-checkin/");
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/visitors/kiosk-checkin/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          signal: controller.signal,
+        }
+      );
+
+      console.log("📡 Response status:", res.status);
+      console.log("📡 Response ok:", res.ok);
+
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const responseData = await res.json(); // ✅ Parse the response to get the visitor ID
+        console.log("✅ Backend push successful! Response data:", responseData);
+        setStatus("Checked in successfully!");
+        return responseData; // ✅ Return the response data instead of just true
+      } else {
+        const errorData = await res.text();
+        console.error("❌ API Error:", errorData);
+        console.error("❌ Response status:", res.status);
+        setStatus("Error: Saved Locally");
+        return false;
+      }
+    } catch (err) {
+      if (err.name === "AbortError") {
+        console.error("⏰ Request timed out");
+      } else {
+        console.error("💥 Server error:", err);
+        console.error("💥 Error details:", err.message);
+      }
+      setStatus("Error: Offline fallback");
+      return false;
+    }
+  };
+  const resetProcess = () => {
+    setCurrentStep("form");
+    setFormData({
+      first_name: "",
+      last_name: "",
+      phone: "",
+      email: "",
+      company: "",
+      plate: "",
+      purpose: "",
+      expectedduration: "60",
+      host_id: "",
+      host_name: ""
+    });
+    setHasCar(null);
+    setSkipPhoto(false);
+    setSkipSignature(false);
+    setSkipHost(false);
+    setCapturedPhoto(null);
+    setSignature(null);
+    setAnimationComplete(false);
+    setHostNotified(false);
+    setHostSeen(false);
+  };
+
+  const getStepStatus = (stepId) => {
+    const steps = ["form", !skipPhoto ? "photo" : null, !skipSignature ? "signature" : null, "complete"].filter(Boolean);
+    const currentIndex = steps.indexOf(currentStep);
+    const stepIndex = steps.indexOf(stepId);
+    
+    if (stepIndex < currentIndex) return "completed";
+    if (stepIndex === currentIndex) return "current";
+    return "pending";
+  };
+
+  const getNextStep = () => {
+    if (currentStep === "form") {
+      return skipPhoto ? (skipSignature ? "complete" : "signature") : "photo";
+    }
+    if (currentStep === "photo") {
+      return skipSignature ? "complete" : "signature";
+    }
+    if (currentStep === "signature") {
+      return "complete";
+    }
+    return "complete";
+  };
+
+  const getPreviousStep = () => {
+    if (currentStep === "complete") {
+      return skipSignature ? (skipPhoto ? "form" : "photo") : "signature";
+    }
+    if (currentStep === "signature") {
+      return skipPhoto ? "form" : "photo";
+    }
+    if (currentStep === "photo") {
+      return "form";
+    }
+    return "form";
+  };
+
+  const CheckAnimation = () => {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="relative">
+          {/* Outer circle animation */}
+          <div className="w-32 h-32 border-4 border-green-200 rounded-full animate-pulse"></div>
+          
+          {/* Inner circle with check */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center animate-bounce">
+              <CheckCircle className="h-12 w-12 text-white animate-pulse" />
             </div>
-            {index < 4 && (
-              <ChevronRight className="h-3 w-3 text-gray-300 mx-4" />
+          </div>
+          
+          {/* Ripple effect */}
+          <div className="absolute inset-0 w-32 h-32 border-2 border-green-300 rounded-full animate-ping opacity-25"></div>
+        </div>
+        
+        <div className="mt-8 text-center space-y-2">
+          <h3 className="text-2xl font-bold text-green-700">Check-in Complete!</h3>
+          <p className="text-green-600">Welcome to our facility</p>
+        </div>
+      </div>
+    );
+  };
+
+  const HostNotificationStatus = () => {
+    if (!formData.host_name) return null;
+    
+    return (
+      <div className="mt-8 p-6 bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">{formData.host_name}</p>
+              <p className="text-sm text-gray-600">Your host</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {!hostNotified ? (
+              <div className="flex items-center space-x-2 text-orange-600">
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium">Notifying...</span>
+              </div>
+            ) : !hostSeen ? (
+              <div className="flex items-center space-x-2 text-blue-600">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium">Notification sent</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-green-600">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">Host notified</span>
+              </div>
             )}
           </div>
-        ))}
+        </div>
       </div>
-    </div>
-  );
-
-  const handleBack = () => {
-    // In a real app, this would navigate back
-    window.history.back();
+    );
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <button
-            onClick={handleBack}
-            className={`p-3 rounded-lg border transition-all duration-200 hover:shadow-sm m-3 
-                        bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300"
-                    }`}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        {/* Responsive Step Indicator */}
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center">
-                <User className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-light text-gray-900">
-                  Visitor Check-In
-                </h1>
-                <div className="flex items-center space-x-2">
-                  <p className="text-sm text-gray-500">
-                    Welcome to our facility
-                  </p>
-                  <div className="flex items-center space-x-1">
-                    {isOnline ? (
-                      <Wifi className="h-3 w-3 text-green-500" />
-                    ) : (
-                      <WifiOff className="h-3 w-3 text-red-500" />
-                    )}
-                    <span className="text-xs text-gray-400">
-                      {isOnline ? "Online" : "Offline Mode"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500">
-                {new Date().toLocaleDateString()}
-              </p>
-              <p className="text-sm text-gray-400">
-                {new Date().toLocaleTimeString()}
-              </p>
-              {status !== "Idle" && (
-                <p className="text-xs text-blue-600 mt-1">Status: {status}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto p-6">
-        <StepIndicator />
-
-        {/* Step 1: Search
-        {currentStep === "search" && (
-          <div className="bg-white border border-gray-100 p-8">
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="text-center">
-                <h2 className="text-2xl font-light text-gray-900 mb-2">
-                  Let's get you checked in
-                </h2>
-                <p className="text-gray-500">
-                  Search for your pre-registered visit or register as a walk-in
-                </p>
-              </div>
-
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by name, phone, or company..."
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-none focus:border-gray-400 focus:outline-none text-lg"
-                />
-              </div>
-
-              {searchQuery && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-gray-900 uppercase tracking-wide">
-                    Pre-registered Visitors
-                  </h3>
-                  {filteredVisitors.length > 0 ? (
-                    <div className="divide-y divide-gray-100">
-                      {filteredVisitors.map((visitor) => (
-                        <div
-                          key={visitor.id}
-                          onClick={() => handleVisitorSelect(visitor)}
-                          className="p-4 hover:bg-gray-25 cursor-pointer transition-colors duration-150"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="text-sm font-medium text-gray-900 mb-1">
-                                {visitor.name}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {visitor.company} • {visitor.purpose}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                Host: {visitor.hostName}
-                              </div>
-                            </div>
-                            <ChevronRight className="h-3 w-3 text-gray-300" />
-                          </div>
-                        </div>
-                      ))}
+            {[
+              { id: "form", icon: FileText, label: "Details", required: true },
+              { id: "photo", icon: Camera, label: "Photo", required: false },
+              { id: "signature", icon: Edit3, label: "Signature", required: false },
+              { id: "complete", icon: CheckCircle, label: "Complete", required: true },
+            ].map((step, index) => {
+              const stepStatus = getStepStatus(step.id);
+              const isSkipped = (step.id === "photo" && skipPhoto) || (step.id === "signature" && skipSignature);
+              
+              return (
+                <div key={step.id} className="flex items-center flex-1">
+                  <div className="flex flex-col items-center space-y-2 sm:space-y-3 flex-1">
+                    <div className={`p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl transition-all duration-300 ${
+                      stepStatus === "current" ? "bg-blue-100 shadow-md scale-105 sm:scale-110" : 
+                      stepStatus === "completed" ? "bg-green-100" :
+                      isSkipped ? "bg-gray-100" :
+                      "bg-gray-50"
+                    }`}>
+                      <step.icon className={`h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 transition-colors ${
+                        stepStatus === "current" ? "text-blue-600" : 
+                        stepStatus === "completed" ? "text-green-600" :
+                        isSkipped ? "text-gray-400" :
+                        "text-gray-400"
+                      }`} />
                     </div>
-                  ) : (
-                    <p className="text-gray-400 text-center py-8 text-sm">
-                      No pre-registered visitors found
-                    </p>
+                    <div className="text-center">
+                      <span className={`text-xs sm:text-sm font-semibold ${
+                        stepStatus === "current" ? "text-blue-600" : 
+                        stepStatus === "completed" ? "text-green-600" :
+                        "text-gray-500"
+                      }`}>
+                        {step.label}
+                      </span>
+                      {!step.required && (
+                        <p className="text-xs text-gray-400 mt-1 hidden sm:block">
+                          {isSkipped ? "Skipped" : "Optional"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {index < 3 && (
+                    <div className={`h-px flex-1 mx-2 sm:mx-4 transition-colors ${
+                      stepStatus === "completed" ? "bg-green-300" : "bg-gray-200"
+                    }`} />
                   )}
                 </div>
-              )}
-
-              <div className="text-center pt-6">
-                <button
-                  onClick={handleWalkInRegistration}
-                  className="inline-flex items-center space-x-2 bg-gray-900 text-white px-8 py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span>Register as Walk-in</span>
-                </button>
-              </div>
-            </div>
+              );
+            })}
           </div>
-        )} */}
+        </div>
 
-        {/* Step 2: Form */}
+        {/* Step 1: Enhanced Responsive Form */}
         {currentStep === "form" && (
-          <div className="bg-white border border-gray-100 p-8">
-            <div className="max-w-2xl mx-auto space-y-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-6 sm:p-8 lg:p-10 shadow-sm">
+            <div className="max-w-3xl mx-auto space-y-8 lg:space-y-10">
               <div className="text-center">
-                <h2 className="text-2xl font-light text-gray-900 mb-2">
-                  {isWalkIn ? "Walk-in Registration" : "Visitor Information"}
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+                  Visitor Information
                 </h2>
-                <p className="text-gray-500">Please fill in your details</p>
+                <p className="text-gray-600 text-base sm:text-lg">Please provide your details for check-in</p>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name <span className="text-red-400">*</span>
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <input
-                      type="text"
-                      name="first_name"
-                      value={formData.first_name}
-                      onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 focus:border-gray-400 focus:outline-none"
-                      placeholder="Enter your full name"
-                      required
-                    />
-                  </div>
-                </div>
+              <div className="space-y-6 sm:space-y-8">
+                {/* Basic Info */}
+                <div className="space-y-4 sm:space-y-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-100 pb-3 flex items-center space-x-2">
+                    <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    <span>Basic Information</span>
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <input
+                          type="text"
+                          name="first_name"
+                          value={formData.first_name}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg"
+                          placeholder="Enter your first name"
+                          required
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number <span className="text-red-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-200 focus:border-gray-400 focus:outline-none"
-                        placeholder="Phone number"
-                        required
-                      />
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                        Last Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <input
+                          type="text"
+                          name="last_name"
+                          value={formData.last_name}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg"
+                          placeholder="Enter your last name"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg"
+                          placeholder="+1 (555) 123-4567"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                        Email Address <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg"
+                          placeholder="your.email@company.com"
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email <span className="text-red-400">*</span>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                      Company <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Building className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
                       <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
+                        type="text"
+                        name="company"
+                        value={formData.company}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-200 focus:border-gray-400 focus:outline-none"
-                        placeholder="Email address"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Car Number Plate <span className="text-red-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <Car className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <input
-                        type="plate"
-                        name="plate"
-                        value={formData.car}
-                        onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-200 focus:border-gray-400 focus:outline-none"
-                        placeholder="Car number plate"
+                        className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg"
+                        placeholder="Your company name"
                         required
                       />
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company <span className="text-red-400">*</span>
-                  </label>
-                  <div className="relative">
-                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <input
-                      type="text"
-                      name="company"
-                      value={formData.company}
-                      onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 focus:border-gray-400 focus:outline-none"
-                      placeholder="Company name"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Vehicle Information */}
+                <div className="space-y-4 sm:space-y-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-100 pb-3 flex items-center space-x-2">
+                    <Car className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    <span>Vehicle Information</span>
+                  </h3>
+                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Purpose of Visit <span className="text-red-400">*</span>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3 sm:mb-4">
+                      Do you have a vehicle today? <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <select
-                        name="purpose"
-                        value={formData.purpose}
-                        onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-200 focus:border-gray-400 focus:outline-none"
-                        required
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setHasCar(true)}
+                        className={`p-4 sm:p-6 rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${
+                          hasCar === true 
+                            ? "bg-blue-50 border-blue-300 text-blue-700 shadow-md" 
+                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+                        }`}
                       >
-                        <option value="">Select purpose</option>
-                        <option value="Meeting">Business Meeting</option>
-                        <option value="Interview">Interview</option>
-                        <option value="Delivery">Delivery</option>
-                        <option value="Maintenance">Maintenance</option>
-                        <option value="Consultation">Consultation</option>
-                        <option value="Other">Other</option>
-                      </select>
+                        <Car className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 sm:mb-3" />
+                        <span className="text-base sm:text-lg font-semibold block">Yes, I have a car</span>
+                        <span className="text-xs sm:text-sm text-gray-500">I'll need parking</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHasCar(false);
+                          setFormData(prev => ({ ...prev, plate: "" }));
+                        }}
+                        className={`p-4 sm:p-6 rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${
+                          hasCar === false 
+                            ? "bg-blue-50 border-blue-300 text-blue-700 shadow-md" 
+                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+                        }`}
+                      >
+                        <MapPin className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 sm:mb-3" />
+                        <span className="text-base sm:text-lg font-semibold block">No vehicle</span>
+                        <span className="text-xs sm:text-sm text-gray-500">Public transport/walking</span>
+                      </button>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Host Name
-                    </label>
-                    <select
-                      name="host_id"
-                      value={formData.host_id}
-                      onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 focus:border-gray-400 focus:outline-none"
-                      required
-                    >
-                      <option value="">Select Host</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.first_name} {user.last_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {hasCar && (
+                    <div className="animate-in slide-in-from-top-4 duration-300">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                        License Plate Number <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Car className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <input
+                          type="text"
+                          name="plate"
+                          value={formData.plate}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg uppercase"
+                          placeholder="ABC-1234"
+                          required={hasCar}
+                          style={{ textTransform: 'uppercase' }}
+                        />
+                      </div>
+                      <p className="text-xs sm:text-sm text-gray-500 mt-2">
+                        We'll help you find parking upon arrival
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Expected Duration <span className="text-red-400">*</span>
-                  </label>
-                  <div className="relative">
-                    <Timer className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <select
-                      name="expectedduration"
-                      value={formData.expectedduration}
-                      required
-                      onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 focus:border-gray-400 focus:outline-none"
-                    >
-                      <option value="15">15 minutes</option>
-                      <option value="30">30 minutes</option>
-                      <option value="60">1 hour</option>
-                      <option value="120">2 hours</option>
-                      <option value="240">4 hours</option>
-                      <option value="480">All day</option>
-                    </select>
+                {/* Visit Details */}
+                <div className="space-y-4 sm:space-y-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-100 pb-3 flex items-center space-x-2">
+                    <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    <span>Visit Details</span>
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                        Purpose of Visit <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Target className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <select
+                          name="purpose"
+                          value={formData.purpose}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg appearance-none bg-white"
+                          required
+                        >
+                          <option value="">Select purpose</option>
+                          <option value="Meeting">Business Meeting</option>
+                          <option value="Interview">Job Interview</option>
+                          <option value="Delivery">Delivery/Pickup</option>
+                          <option value="Maintenance">Maintenance Service</option>
+                          <option value="Consultation">Consultation</option>
+                          <option value="Training">Training Session</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                        Expected Duration <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Timer className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <select
+                          name="expectedduration"
+                          value={formData.expectedduration}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg appearance-none bg-white"
+                          required
+                        >
+                          <option value="15">15 minutes</option>
+                          <option value="30">30 minutes</option>
+                          <option value="60">1 hour</option>
+                          <option value="120">2 hours</option>
+                          <option value="240">4 hours</option>
+                          <option value="480">Full day</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
+
+                  {!skipHost && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <label className="block text-sm font-semibold text-gray-700">
+                          Host Selection
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setSkipHost(true)}
+                          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          Skip this step
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Users className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                        <select
+                          name="host_id"
+                          value={formData.host_id}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base sm:text-lg appearance-none bg-white"
+                        >
+                          <option value="">Select your host (optional)</option>
+                          {users.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.first_name} {user.last_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* ✅ Debug info - remove in production */}
-                <div className="bg-gray-50 p-3 rounded text-xs">
-                  <strong>Debug Info:</strong>
-                  <br />
-                  Host ID: {formData.host_id}
-                  <br />
-                  Host Name: {formData.host_name}
+                {/* Optional Steps Selection */}
+                <div className="space-y-4 sm:space-y-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-100 pb-3 flex items-center space-x-2">
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    <span>Additional Options</span>
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div className={`p-4 sm:p-6 border-2 rounded-lg sm:rounded-xl transition-all duration-200 cursor-pointer ${
+                      skipPhoto ? "border-gray-200 bg-gray-50" : "border-blue-200 bg-blue-50"
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 sm:space-x-4">
+                          <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${
+                            skipPhoto ? "bg-gray-200" : "bg-blue-100"
+                          }`}>
+                            <Camera className={`h-4 w-4 sm:h-6 sm:w-6 ${
+                              skipPhoto ? "text-gray-500" : "text-blue-600"
+                            }`} />
+                          </div>
+                          <div>
+                            <p className="text-sm sm:text-base font-semibold text-gray-900">Photo Capture</p>
+                            <p className="text-xs sm:text-sm text-gray-600">For your visitor badge</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSkipPhoto(!skipPhoto)}
+                          className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-200 ${
+                            skipPhoto 
+                              ? "bg-gray-200 text-gray-600 hover:bg-gray-300" 
+                              : "bg-blue-200 text-blue-700 hover:bg-blue-300"
+                          }`}
+                        >
+                          {skipPhoto ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Check className="h-4 w-4 sm:h-5 sm:w-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={`p-4 sm:p-6 border-2 rounded-lg sm:rounded-xl transition-all duration-200 cursor-pointer ${
+                      skipSignature ? "border-gray-200 bg-gray-50" : "border-blue-200 bg-blue-50"
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 sm:space-x-4">
+                          <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${
+                            skipSignature ? "bg-gray-200" : "bg-blue-100"
+                          }`}>
+                            <Edit3 className={`h-4 w-4 sm:h-6 sm:w-6 ${
+                              skipSignature ? "text-gray-500" : "text-blue-600"
+                            }`} />
+                          </div>
+                          <div>
+                            <p className="text-sm sm:text-base font-semibold text-gray-900">Digital Signature</p>
+                            <p className="text-xs sm:text-sm text-gray-600">Terms acknowledgment</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSkipSignature(!skipSignature)}
+                          className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-200 ${
+                            skipSignature 
+                              ? "bg-gray-200 text-gray-600 hover:bg-gray-300" 
+                              : "bg-blue-200 text-blue-700 hover:bg-blue-300"
+                          }`}
+                        >
+                          {skipSignature ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Check className="h-4 w-4 sm:h-5 sm:w-5" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg sm:rounded-xl p-4">
+                    <div className="flex items-start space-x-3">
+                      <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">Quick Check-in</p>
+                        <p className="text-xs sm:text-sm text-blue-700">
+                          You can skip photo and signature for faster processing. These can be completed later if needed.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex space-x-4 pt-6">
+              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 pt-6 sm:pt-8">
                 <button
                   onClick={resetProcess}
-                  className="flex-1 bg-gray-600 text-white py-3 text-sm font-medium hover:bg-gray-700 transition-colors"
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 sm:py-4 px-6 rounded-lg sm:rounded-xl text-base sm:text-lg font-semibold hover:bg-gray-200 transition-colors"
                 >
-                  Back
+                  Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    if(formData.purpose === "" || formData.company === "" || formData.badgenumberhost_id === "") {
-                      alert("Please fill in all required fields.")
-                      return
-                    }
-                    setCurrentStep("photo")
-                  }}
-                  className="flex-1 bg-gray-900 text-white py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
+                  onClick={handleNext}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 sm:py-4 px-6 sm:px-8 rounded-lg sm:rounded-xl text-base sm:text-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center justify-center space-x-3"
                 >
-                  Next: Take Photo
+                  <span>Continue Check-in</span>
+                  <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Step 3: Photo Capture */}
-        {currentStep === "photo" && (
-          <div className="bg-white border border-gray-100 p-8">
-            <div className="max-w-2xl mx-auto space-y-6">
+        {/* Step 2: Photo Capture */}
+        {currentStep === "photo" && !skipPhoto && (
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-6 sm:p-8 lg:p-10 shadow-sm">
+            <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
               <div className="text-center">
-                <h2 className="text-2xl font-light text-gray-900 mb-2">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
                   Take Your Photo
                 </h2>
-                <p className="text-gray-500">
-                  This will be used for your visitor badge
-                </p>
+                <p className="text-gray-600 text-base sm:text-lg">This will be used for your visitor badge and security</p>
               </div>
 
               <div className="text-center">
-                <div className="inline-block bg-gray-50 border border-gray-100 p-4 mb-6">
+                <div className="inline-block bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 border border-gray-200 shadow-inner">
                   {!capturedPhoto ? (
                     <div className="relative">
                       <video
                         ref={videoRef}
                         autoPlay
                         playsInline
-                        className="w-80 h-60 object-cover border border-gray-200"
+                        className="w-full max-w-sm sm:w-80 lg:w-96 h-48 sm:h-60 lg:h-72 object-cover rounded-lg sm:rounded-xl border-2 sm:border-4 border-white shadow-lg"
                       />
                       <canvas ref={canvasRef} className="hidden" />
                       {cameraActive && (
-                        <button
-                          onClick={capturePhoto}
-                          className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white p-3 rounded-full hover:bg-gray-800 transition-colors"
-                        >
-                          <Camera className="h-5 w-5" />
-                        </button>
+                        <div className="absolute inset-x-0 bottom-4 sm:bottom-6">
+                          <button
+                            onClick={capturePhoto}
+                            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 sm:p-6 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all shadow-xl transform hover:scale-105"
+                          >
+                            <Camera className="h-6 w-6 sm:h-8 sm:w-8" />
+                          </button>
+                        </div>
+                      )}
+                      {!cameraActive && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg sm:rounded-xl">
+                          <div className="text-center">
+                            <Camera className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-500 text-sm sm:text-base">Initializing camera...</p>
+                          </div>
+                        </div>
                       )}
                     </div>
                   ) : (
                     <div className="relative">
                       <img
                         src={capturedPhoto}
-                        alt="Captured"
-                        className="w-80 h-60 object-cover border border-gray-200"
+                        alt="Captured visitor photo"
+                        className="w-full max-w-sm sm:w-80 lg:w-96 h-48 sm:h-60 lg:h-72 object-cover rounded-lg sm:rounded-xl border-2 sm:border-4 border-white shadow-lg"
                       />
                       <button
                         onClick={retakePhoto}
-                        className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800 transition-colors"
+                        className="absolute bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg"
                       >
                         Retake Photo
                       </button>
@@ -798,19 +897,29 @@ try {
                   )}
                 </div>
 
+                <div className="flex justify-center space-x-4 mt-6 sm:mt-8">
+                  <button
+                    onClick={() => handleSkipConfirm("photo")}
+                    className="px-4 sm:px-6 py-2 sm:py-3 text-sm text-gray-600 hover:text-gray-800 transition-colors font-medium border border-gray-300 rounded-lg sm:rounded-xl hover:bg-gray-50"
+                  >
+                    Skip Photo
+                  </button>
+                </div>
+
                 {capturedPhoto && (
-                  <div className="flex space-x-4">
+                  <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mt-6 sm:mt-8">
                     <button
-                      onClick={() => setCurrentStep("form")}
-                      className="flex-1 bg-gray-600 text-white py-3 text-sm font-medium hover:bg-gray-700 transition-colors"
+                      onClick={() => setCurrentStep(getPreviousStep())}
+                      className="flex-1 bg-gray-100 text-gray-700 py-3 sm:py-4 px-6 rounded-lg sm:rounded-xl text-base sm:text-lg font-semibold hover:bg-gray-200 transition-colors"
                     >
                       Back
                     </button>
                     <button
-                      onClick={() => setCurrentStep("signature")}
-                      className="flex-1 bg-gray-900 text-white py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
+                      onClick={() => setCurrentStep(getNextStep())}
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 sm:py-4 px-6 rounded-lg sm:rounded-xl text-base sm:text-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center justify-center space-x-3"
                     >
-                      Next: Signature
+                      <span>{!skipSignature ? "Next: Signature" : "Complete Check-in"}</span>
+                      <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                   </div>
                 )}
@@ -819,26 +928,25 @@ try {
           </div>
         )}
 
-        {/* Step 4: Signature */}
-        {currentStep === "signature" && (
-          <div className="bg-white border border-gray-100 p-8">
-            <div className="max-w-2xl mx-auto space-y-6">
+        {/* Step 3: Signature */}
+        {currentStep === "signature" && !skipSignature && (
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-6 sm:p-8 lg:p-10 shadow-sm">
+            <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
               <div className="text-center">
-                <h2 className="text-2xl font-light text-gray-900 mb-2">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
                   Digital Signature
                 </h2>
-                <p className="text-gray-500">
-                  Please sign below to complete your check-in
-                </p>
+                <p className="text-gray-600 text-base sm:text-lg">Please sign below to acknowledge our visitor policies</p>
               </div>
 
               <div className="text-center">
-                <div className="inline-block border border-gray-200 p-4 mb-6">
+                <div className="inline-block border-2 border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-white shadow-inner overflow-hidden">
                   <canvas
                     ref={canvasRef}
-                    width={500}
+                    width={Math.min(600, window.innerWidth - 100)}
                     height={200}
-                    className="border border-gray-100 cursor-crosshair"
+                    className="border border-gray-200 cursor-crosshair bg-white rounded-lg sm:rounded-xl shadow-sm w-full max-w-full"
+                    style={{ touchAction: 'none' }}
                     onMouseDown={(e) => {
                       const canvas = canvasRef.current;
                       const rect = canvas.getBoundingClientRect();
@@ -855,9 +963,9 @@ try {
                       if (!canvas.isDrawing) return;
                       const rect = canvas.getBoundingClientRect();
                       const context = canvas.getContext("2d");
-                      context.lineWidth = 2;
+                      context.lineWidth = 3;
                       context.lineCap = "round";
-                      context.strokeStyle = "#000";
+                      context.strokeStyle = "#1f2937";
                       context.lineTo(
                         e.clientX - rect.left,
                         e.clientY - rect.top
@@ -868,162 +976,254 @@ try {
                       const canvas = canvasRef.current;
                       canvas.isDrawing = false;
                     }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      const canvas = canvasRef.current;
+                      const rect = canvas.getBoundingClientRect();
+                      const context = canvas.getContext("2d");
+                      const touch = e.touches[0];
+                      context.beginPath();
+                      context.moveTo(
+                        touch.clientX - rect.left,
+                        touch.clientY - rect.top
+                      );
+                      canvas.isDrawing = true;
+                    }}
+                    onTouchMove={(e) => {
+                      e.preventDefault();
+                      const canvas = canvasRef.current;
+                      if (!canvas.isDrawing) return;
+                      const rect = canvas.getBoundingClientRect();
+                      const context = canvas.getContext("2d");
+                      const touch = e.touches[0];
+                      context.lineWidth = 3;
+                      context.lineCap = "round";
+                      context.strokeStyle = "#1f2937";
+                      context.lineTo(
+                        touch.clientX - rect.left,
+                        touch.clientY - rect.top
+                      );
+                      context.stroke();
+                    }}
+                    onTouchEnd={() => {
+                      const canvas = canvasRef.current;
+                      canvas.isDrawing = false;
+                    }}
                   />
-                  <p className="text-xs text-gray-400 mt-2">
-                    Draw your signature above
+                  <p className="text-xs sm:text-sm text-gray-500 mt-4">
+                    Sign with your mouse, finger, or stylus
                   </p>
                 </div>
 
-                <div className="flex justify-center space-x-4 mb-6">
+                <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
                   <button
                     onClick={clearSignature}
-                    className="inline-flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 text-sm font-medium hover:bg-gray-700 transition-colors"
+                    className="inline-flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors"
                   >
-                    <RotateCcw className="h-4 w-4" />
+                    <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Clear</span>
                   </button>
                   <button
                     onClick={saveSignature}
-                    className="inline-flex items-center space-x-2 bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-green-700 transition-colors"
+                    className="inline-flex items-center space-x-2 bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors shadow-md"
                   >
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Save Signature</span>
                   </button>
                 </div>
 
-                <div className="flex space-x-4">
+                <div className="flex justify-center mt-4 sm:mt-6">
                   <button
-                    onClick={() => setCurrentStep("photo")}
-                    className="flex-1 bg-gray-600 text-white py-3 text-sm font-medium hover:bg-gray-700 transition-colors"
+                    onClick={() => handleSkipConfirm("signature")}
+                    className="px-4 sm:px-6 py-2 sm:py-3 text-sm text-gray-600 hover:text-gray-800 transition-colors font-medium border border-gray-300 rounded-lg sm:rounded-xl hover:bg-gray-50"
+                  >
+                    Skip Signature
+                  </button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mt-8 sm:mt-10">
+                  <button
+                    onClick={() => setCurrentStep(getPreviousStep())}
+                    className="flex-1 bg-gray-100 text-gray-700 py-3 sm:py-4 px-6 rounded-lg sm:rounded-xl text-base sm:text-lg font-semibold hover:bg-gray-200 transition-colors"
                   >
                     Back
                   </button>
-                  {signature && (
-                    <button
-                      onClick={() => setCurrentStep("complete")}
-                      className="flex-1 bg-gray-900 text-white py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
-                    >
-                      Complete Check-in
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setCurrentStep("complete")}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 sm:py-4 px-6 rounded-lg sm:rounded-xl text-base sm:text-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center justify-center space-x-3"
+                    disabled={!signature}
+                  >
+                    <span>Complete Check-in</span>
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
                 </div>
+
+                {!signature && (
+                  <div className="text-center mt-4">
+                    <p className="text-xs sm:text-sm text-gray-500">Please sign above or skip to continue</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Step 5: Complete */}
+        {/* Step 4: Completion with Animation */}
         {currentStep === "complete" && (
-          <div className="bg-white border border-gray-100 p-8">
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-                <h2 className="text-2xl font-light text-gray-900 mb-2">
-                  Check-in Complete!
-                </h2>
-                <p className="text-gray-500 mb-6">
-                  Welcome to our facility, {formData.first_name}!
-                </p>
-              </div>
+          <div className="space-y-6 sm:space-y-8">
+            {/* Main Success Card */}
+            <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-6 sm:p-8 lg:p-12 shadow-sm">
+              <div className="max-w-2xl mx-auto text-center space-y-8">
+                
+                {/* Animated Checkmark */}
+                {!animationComplete ? (
+                  <div className="flex flex-col items-center justify-center py-8 sm:py-12">
+                    <div className="relative">
+                      {/* Processing animation */}
+                      <div className="w-24 h-24 sm:w-32 sm:h-32 border-4 border-blue-200 rounded-full animate-spin">
+                        <div className="w-4 h-4 sm:w-6 sm:h-6 bg-blue-600 rounded-full absolute top-0 left-1/2 transform -translate-x-1/2"></div>
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <UserCheck className="h-8 w-8 sm:h-12 sm:w-12 text-blue-600 animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="mt-6 sm:mt-8 text-center space-y-2">
+                      <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Processing Check-in...</h3>
+                      <p className="text-gray-600 text-sm sm:text-base">Please wait a moment</p>
+                    </div>
+                  </div>
+                ) : (
+                  <CheckAnimation />
+                )}
 
-              <div className="bg-gray-50 border border-gray-100 p-6">
-                <h3 className="text-sm font-medium text-gray-900 uppercase tracking-wide mb-4">
-                  Visit Summary
-                </h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Visitor:</span>
-                    <p className="text-gray-900 font-medium">
-                      {formData.first_name}
-                    </p>
+                {/* Visit Summary - Only show after animation */}
+                {animationComplete && (
+                  <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center justify-center space-x-2">
+                      <Badge className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                      <span>Visit Summary</span>
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-left">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl shadow-sm">
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Visitor</span>
+                          <div className="mt-1 sm:mt-2">
+                            <p className="text-base sm:text-lg font-semibold text-gray-900">{formData.first_name} {formData.last_name}</p>
+                            <p className="text-xs sm:text-sm text-gray-600">{formData.company}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl shadow-sm">
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Purpose</span>
+                          <div className="mt-1 sm:mt-2">
+                            <p className="text-base sm:text-lg font-semibold text-gray-900">{formData.purpose}</p>
+                            <p className="text-xs sm:text-sm text-gray-600">Duration: {formData.expectedduration} minutes</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl shadow-sm">
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Check-in Time</span>
+                          <div className="mt-1 sm:mt-2">
+                            <p className="text-base sm:text-lg font-semibold text-gray-900">
+                              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            <p className="text-xs sm:text-sm text-gray-600">
+                              {new Date().toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        {hasCar && (
+                          <div className="p-3 sm:p-4 bg-blue-50 rounded-lg sm:rounded-xl border border-blue-200">
+                            <span className="text-xs font-medium text-blue-700 uppercase tracking-wide">Vehicle</span>
+                            <div className="mt-1 sm:mt-2 flex items-center space-x-2">
+                              <Car className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                              <p className="text-base sm:text-lg font-semibold text-blue-900">{formData.plate}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Company:</span>
-                    <p className="text-gray-900 font-medium">
-                      {formData.company || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Purpose:</span>
-                    <p className="text-gray-900 font-medium">
-                      {formData.purpose}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Host:</span>
-                    <p className="text-gray-900 font-medium">
-                      {formData.host_name}
-                    </p>{" "}
-                    {/* ✅ Fixed reference */}
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Time:</span>
-                    <p className="text-gray-900 font-medium">
-                      {new Date().toLocaleTimeString()}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Duration:</span>
-                    <p className="text-gray-900 font-medium">
-                      {formData.expectedduration} minutes
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Status:</span>
-                    <p
-                      className={`font-medium ${
-                        status.includes("successfully")
-                          ? "text-green-600"
-                          : status.includes("Offline") ||
-                            status.includes("Error")
-                          ? "text-orange-600"
-                          : "text-blue-600"
+                )}
+
+                {/* Host Notification Status */}
+                {animationComplete && <HostNotificationStatus />}
+
+                {/* Action Buttons - Only show after animation */}
+                {animationComplete && (
+                  <div className="space-y-4 sm:space-y-6">
+                    <button
+                      onClick={sendToServer}
+                      disabled={isProcessing || checkoutDisabled}
+                      className={`w-full py-4 sm:py-6 px-6 sm:px-8 rounded-lg sm:rounded-xl text-lg sm:text-xl font-bold transition-all duration-200 ${
+                        isProcessing
+                          ? "bg-gray-400 text-white cursor-not-allowed"
+                          : checkoutDisabled
+                          ? "bg-red-600 text-white cursor-not-allowed"
+                          : "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                       }`}
                     >
-                      {status}
-                    </p>
+                      {isProcessing ? (
+                        <div className="flex items-center justify-center space-x-3">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Processing...</span>
+                        </div>
+                      ) : checkoutDisabled ? (
+                        <div className="flex items-center justify-center space-x-3">
+                          <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
+                          <span>Checkout ({Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')})</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-3">
+                          <Badge className="h-5 w-5 sm:h-6 sm:w-6" />
+                          <span>Print Badge & Complete</span>
+                        </div>
+                      )}
+                    </button>
+                    
+                    <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                      <button
+                        onClick={resetProcess}
+                        className="text-sm text-gray-600 hover:text-gray-800 transition-colors font-medium px-4 py-2 rounded-lg hover:bg-gray-100"
+                      >
+                        Start New Check-in
+                      </button>
+                      <button
+                        onClick={() => setCurrentStep("form")}
+                        className="text-sm text-blue-600 hover:text-blue-800 transition-colors font-medium px-4 py-2 rounded-lg hover:bg-blue-50"
+                      >
+                        Edit Details
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Connection:</span>
-                    <p
-                      className={`font-medium ${
-                        isOnline ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {isOnline ? "Online" : "Offline"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                )}
 
-              {!isOnline && (
-                <div className="bg-orange-50 border border-orange-200 p-4">
-                  <div className="flex items-center space-x-2">
-                    <WifiOff className="h-4 w-4 text-orange-600" />
-                    <p className="text-sm text-orange-700">
-                      Your check-in has been saved locally and will sync when
-                      connection is restored.
-                    </p>
+                {/* Next Steps Info */}
+                {animationComplete && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg sm:rounded-2xl p-4 sm:p-6">
+                    <div className="text-center">
+                      <h4 className="text-base sm:text-lg font-semibold text-blue-900 mb-3 sm:mb-4">Next Steps</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
+                        <div className="flex items-center space-x-2 justify-center">
+                          <Badge className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+                          <span className="text-blue-800">Collect your visitor badge</span>
+                        </div>
+                        <div className="flex items-center space-x-2 justify-center">
+                          <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+                          <span className="text-blue-800">Reception will guide you</span>
+                        </div>
+                        <div className="flex items-center space-x-2 justify-center">
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+                          <span className="text-blue-800">Remember to check out</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              <div className="text-center">
-                <button
-                  onClick={handleSubmit}
-                  disabled={status === "Processing..."}
-                  className={`px-8 py-3 text-sm font-medium transition-colors ${
-                    status === "Processing..."
-                      ? "bg-gray-400 text-white cursor-not-allowed"
-                      : "bg-gray-900 text-white hover:bg-gray-800"
-                  }`}
-                >
-                  {status === "Processing..."
-                    ? "Processing..."
-                    : "Print Badge & Finish"}
-                </button>
+                )}
               </div>
             </div>
           </div>
@@ -1033,4 +1233,4 @@ try {
   );
 };
 
-export default NewKiosk;
+export default VisitorCheckIn;

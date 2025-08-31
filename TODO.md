@@ -1,0 +1,7 @@
+- [x] Update imports in src/pages/NewLogin.jsx to use lucide-react instead of react-icons
+- [x] Replace FcGoogle with Globe icon from lucide-react
+- [x] Replace FaGithub with Github icon from lucide-react
+- [x] Add localStorage.setItem('selectedVisitor', JSON.stringify(visitor)) on visitor row click in VisitorsTable.jsx
+- [x] Update VisitorDetails.jsx to retrieve visitor data from localStorage
+- [x] Fix "Cannot read properties of undefined (reading 'split')" error in VisitorDetails.jsx
+- [ ] Test the application to ensure icons render correctly

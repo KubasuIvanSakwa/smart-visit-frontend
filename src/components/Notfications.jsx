@@ -3,12 +3,12 @@ import { CheckCircle, AlertCircle, X, Info, AlertTriangle } from 'lucide-react';
 
 const Notifications = ({ message, type, onDismiss, theme = 'light' }) => {
   const [isVisible, setIsVisible] = useState(true)
-  
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
       onDismiss();
-    }, 5000);
+    }, 3000);
     return () => clearTimeout(timer);
   }, [onDismiss]);
 
@@ -19,91 +19,89 @@ const Notifications = ({ message, type, onDismiss, theme = 'light' }) => {
     error: <AlertCircle className="w-5 h-5" />,
     warning: <AlertTriangle className="w-5 h-5" />,
     info: <Info className="w-5 h-5" />,
+    loading: <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />,
   };
 
-  // Light theme styles with blended grays and subtle color hints
-  const lightColorMap = {
+  // Modern dashboard-style toast notifications
+  const styleMap = {
     success: {
-      container: 'bg-gray-50 border-gray-200',
-      text: 'text-gray-700',
+      bg: 'bg-green-50',
+      border: 'border-green-200',
+      text: 'text-green-800',
       icon: 'text-green-600',
-      accent: 'border-l-green-400'
+      progress: 'bg-green-500'
     },
     error: {
-      container: 'bg-gray-50 border-gray-200',
-      text: 'text-gray-700',
-      icon: 'text-red-500',
-      accent: 'border-l-red-400'
+      bg: 'bg-red-50',
+      border: 'border-red-200',
+      text: 'text-red-800',
+      icon: 'text-red-600',
+      progress: 'bg-red-500'
     },
     warning: {
-      container: 'bg-gray-50 border-gray-200',
-      text: 'text-gray-700',
-      icon: 'text-amber-500',
-      accent: 'border-l-amber-400'
+      bg: 'bg-amber-50',
+      border: 'border-amber-200',
+      text: 'text-amber-800',
+      icon: 'text-amber-600',
+      progress: 'bg-amber-500'
     },
     info: {
-      container: 'bg-gray-50 border-gray-200',
-      text: 'text-gray-700',
-      icon: 'text-blue-500',
-      accent: 'border-l-blue-400'
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+      text: 'text-blue-800',
+      icon: 'text-blue-600',
+      progress: 'bg-blue-500'
+    },
+    loading: {
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+      text: 'text-blue-800',
+      icon: 'text-blue-600',
+      progress: 'bg-blue-500'
     },
   };
 
-  // Dark theme styles with blended grays and subtle color hints
-  const darkColorMap = {
-    success: {
-      container: 'bg-gray-900 border-gray-800',
-      text: 'text-gray-300',
-      icon: 'text-green-400',
-      accent: 'border-l-green-500'
-    },
-    error: {
-      container: 'bg-gray-900 border-gray-800',
-      text: 'text-gray-300',
-      icon: 'text-red-400',
-      accent: 'border-l-red-500'
-    },
-    warning: {
-      container: 'bg-gray-900 border-gray-800',
-      text: 'text-gray-300',
-      icon: 'text-amber-400',
-      accent: 'border-l-amber-500'
-    },
-    info: {
-      container: 'bg-gray-900 border-gray-800',
-      text: 'text-gray-300',
-      icon: 'text-blue-400',
-      accent: 'border-l-blue-500'
-    },
-  };
-
-  const colorMap = theme === 'light' ? lightColorMap : darkColorMap;
-  const styles = colorMap[type] 
-
+  const styles = styleMap[type];
 
   return (
-    <div className={`fixed top-4 right-4 z-50 transition-all duration-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
-      <div className={`border-l-4 ${styles.accent} border ${styles.container} p-4 rounded-lg shadow-lg max-w-xs md:max-w-sm backdrop-blur-sm`}>
-        <div className="flex items-start">
-          <div className={`flex-shrink-0 ${styles.icon}`}>
+    <div className={`fixed top-4 right-4 z-50 transition-all duration-500 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'}`}>
+      <div className={`${styles.bg} ${styles.border} border rounded-lg shadow-lg p-2 max-w-sm backdrop-blur-sm`}>
+        <div className="flex items-center space-x-2">
+          <div className={`flex-shrink-0 p-0.5 rounded-full bg-white ${styles.icon}`}>
             {iconMap[type]}
           </div>
-          <div className="ml-3 flex-1">
-            <p className={`text-sm font-medium ${styles.text}`}>{message}</p>
+          <div className="flex-1 min-w-0">
+            <p className={`text-xs font-medium ${styles.text} leading-tight`}>{message}</p>
           </div>
-          <div className="ml-4 flex-shrink-0">
-            <button
-              onClick={() => {
-                setIsVisible(false);
-                onDismiss();
-              }}
-              className={`${theme === 'light' ? 'text-gray-400 hover:text-gray-600' : 'text-gray-500 hover:text-gray-300'} focus:outline-none transition-colors duration-200`}
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              setIsVisible(false);
+              onDismiss();
+            }}
+            className={`${styles.text} hover:bg-white/50 focus:outline-none transition-colors duration-200 p-0.5 rounded-full`}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+
+        {/* Compact progress bar */}
+        <div className="mt-1.5 bg-white/50 rounded-full h-0.5 overflow-hidden">
+          <div
+            className={`h-full ${styles.progress} transition-all duration-3000 ease-linear`}
+            style={{
+              width: isVisible ? '100%' : '0%',
+              animation: isVisible ? 'shrink 3s linear forwards' : 'none'
+            }}
+          />
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes shrink {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 };
