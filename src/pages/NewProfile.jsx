@@ -29,7 +29,7 @@ const ModernProfile = () => {
 
     setLoading(prev => ({ ...prev, profile: true }));
     try {
-      const response = await axios.get('http://https://smart-visit-backend.onrender.com/api/auth/user/profile/', {
+      const response = await axios.get('https://smart-visit-backend.onrender.com/api/auth/user/profile/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

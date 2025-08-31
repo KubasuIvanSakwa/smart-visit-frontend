@@ -45,7 +45,7 @@ const handleSubmit = async (e) => {
   setIsLoading(true);
 
   try {
-    const response = await fetch('http://https://smart-visit-backend.onrender.com/api/auth/register/', {
+    const response = await fetch('https://smart-visit-backend.onrender.com/api/auth/register/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
