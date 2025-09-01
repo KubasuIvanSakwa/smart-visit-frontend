@@ -72,7 +72,7 @@ const LoginPage = ({ navigate, addNotification }) => {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Image/Brand Section (60%) */}
-      <div className="hidden lg:flex lg:w-3/5 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-3/5 relative overflow-hidden">
         <img
           src={anime4}
           alt="Branding"
@@ -252,7 +252,7 @@ const SignupPage = ({ navigate, addNotification }) => {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Image/Brand Section (60%) */}
-      <div className="hidden lg:flex lg:w-3/5 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-500 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-3/5 relative overflow-hidden">
         <img
           src={anime5}
           alt="Branding"
