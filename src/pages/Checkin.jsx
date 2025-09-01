@@ -11,6 +11,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useNotification } from '../components/NotificationProvider.jsx';
+import api from '../api/axios.js';
 
 const CheckIn = () => {
   const [activeTheme, setActiveTheme] = useState('light');
@@ -57,32 +58,25 @@ const CheckIn = () => {
   });
 
   try {
-    const response = await fetch("/api/checkin/", {
-      method: "POST",
-      body: form,
-    });
+    const response = await api.post("/api/checkin/", form);
 
-    if (response.ok) {
-      alert("Visitor checked in successfully!");
-      setFormData({
-        qrCode: "",
-        name: "",
-        email: "",
-        phone: "",
-        company: "",
-        hostName: "",
-        purpose: "",
-        photo: null,
-        nda: null,
-        healthDeclaration: false,
-      });
-    } else {
-      const errorData = await response.json();
-      alert("Check-in failed: " + JSON.stringify(errorData));
-    }
+    alert("Visitor checked in successfully!");
+    setFormData({
+      qrCode: "",
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      hostName: "",
+      purpose: "",
+      photo: null,
+      nda: null,
+      healthDeclaration: false,
+    });
   } catch (error) {
     console.error("Check-in error:", error);
-    addNotification(`${error.message}`, 'warning')
+    const errorMessage = error.response?.data?.message || error.message || "Check-in failed";
+    addNotification(errorMessage, 'warning');
   }
 };
 

@@ -8,6 +8,7 @@ import Layout from "./pages/Layout";
 import Landingpage from "./pages/Landingpage";
 import { RouterProvider } from "react-router";
 import CheckIn from "./pages/Checkin";
+import Checkout from "./pages/Checkout";
 import BadgePage from "./components/BadgePage";
 import VisitorDetails from "./pages/VisitorDetails";
 import Register from "./pages/Register";
@@ -51,6 +52,7 @@ function App() {
           <Route path="login" element={<NewLogin />} />
           <Route path="signup" element={<Register />} />
           <Route path="kiosk-checkin" element={<NewKiosk />} />
+          <Route path="checkout" element={<Checkout />} />
         </Route>
 
         {/* <Route path="check-in" element={<CheckIn />} /> */}
