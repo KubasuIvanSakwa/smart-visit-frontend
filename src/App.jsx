@@ -48,24 +48,26 @@ function App() {
               </>
             }
           />
-          <Route path="/login" element={<NewLogin />} />
-          <Route path="/signup" element={<Register />} />
+          <Route path="login" element={<NewLogin />} />
+          <Route path="signup" element={<Register />} />
+          <Route path="kiosk-checkin" element={<NewKiosk />} />
         </Route>
 
-        <Route path="check-in" element={<CheckIn />} />
+        {/* <Route path="check-in" element={<CheckIn />} /> */}
         <Route path="*" element={<NotFound />} />
-        <Route path="/entry" element={<VisitorEntry />} />
-        <Route path="/kiosk-checkin" element={<NewKiosk />} />
+        {/* <Route path="/entry" element={<VisitorEntry />} /> */}
 
         {/* Protected Routes */}
-        <Route path="/dashboard" element={<Layout />}>
-            <Route index element={<Dashbaord />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="adduser" element={<AddUser />} />
-          <Route path="kiosk-checkin" element={<NewKiosk />} />
-          <Route path="visitors" element={<VisitorDetails />} />
+        <Route path="/dashboard" element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+                <Route index element={<Dashbaord />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="notifications" element={<NotificationsPage />} />
+                <Route path="adduser" element={<AddUser />} />
+                <Route path="kiosk-checkin" element={<NewKiosk />} />
+                <Route path="visitors" element={<VisitorDetails />} />
+            </Route>
         </Route>
       </>
     ),
