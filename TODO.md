@@ -4,4 +4,7 @@
 - [x] Add localStorage.setItem('selectedVisitor', JSON.stringify(visitor)) on visitor row click in VisitorsTable.jsx
 - [x] Update VisitorDetails.jsx to retrieve visitor data from localStorage
 - [x] Fix "Cannot read properties of undefined (reading 'split')" error in VisitorDetails.jsx
+- [x] Implement checkout functionality: Create Checkout.jsx page and add route
+- [x] Fix checkin and checkout to use authenticated API calls
 - [ ] Test the application to ensure icons render correctly
+- [ ] Test checkout functionality and backend integration

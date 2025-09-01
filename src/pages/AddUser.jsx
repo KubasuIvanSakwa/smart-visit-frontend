@@ -174,7 +174,7 @@ const AddUser = () => {
 
   const ThemeSelector = () => (
     <div className="fixed top-4 right-6 z-50 flex bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-      <button
+      {/* <button
         onClick={() => setActiveTheme('light')}
         className={`px-4 py-2 text-sm font-medium transition-colors ${
           activeTheme === 'light' 
@@ -183,7 +183,7 @@ const AddUser = () => {
         }`}
       >
         Light
-      </button>
+      </button> */}
       <button
         onClick={() => setActiveTheme('dark')}
         className={`px-4 py-2 text-sm font-medium transition-colors ${

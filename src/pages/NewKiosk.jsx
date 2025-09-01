@@ -234,47 +234,21 @@ const VisitorCheckIn = () => {
     console.log("🚀 Starting backend push to kiosk-checkin endpoint");
     console.log("📤 Data being sent:", data);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
-
     try {
-      console.log("🌐 Making fetch request to: http://127.0.0.1:8000/api/visitors/kiosk-checkin/");
+      console.log("🌐 Making API request to: /api/visitors/kiosk-checkin/");
 
-      const res = await fetch(
-        "http://127.0.0.1:8000/api/visitors/kiosk-checkin/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-          signal: controller.signal,
-        }
-      );
+      const response = await api.post("/api/visitors/kiosk-checkin/", data);
 
-      console.log("📡 Response status:", res.status);
-      console.log("📡 Response ok:", res.ok);
+      console.log("📡 Response status:", response.status);
+      console.log("📡 Response data:", response.data);
 
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const responseData = await res.json(); // ✅ Parse the response to get the visitor ID
-        console.log("✅ Backend push successful! Response data:", responseData);
-        setStatus("Checked in successfully!");
-        return responseData; // ✅ Return the response data instead of just true
-      } else {
-        const errorData = await res.text();
-        console.error("❌ API Error:", errorData);
-        console.error("❌ Response status:", res.status);
-        setStatus("Error: Saved Locally");
-        return false;
-      }
+      console.log("✅ Backend push successful! Response data:", response.data);
+      setStatus("Checked in successfully!");
+      return response.data;
     } catch (err) {
-      if (err.name === "AbortError") {
-        console.error("⏰ Request timed out");
-      } else {
-        console.error("💥 Server error:", err);
-        console.error("💥 Error details:", err.message);
-      }
-      setStatus("Error: Offline fallback");
+      console.error("❌ API Error:", err);
+      console.error("❌ Error details:", err.response?.data || err.message);
+      setStatus("Error: Saved Locally");
       return false;
     }
   };
